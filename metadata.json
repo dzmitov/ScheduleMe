@@ -1,0 +1,9 @@
+
+{
+  "name": "ScheduleMe",
+  "description": "Teacher Schedule Manager",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
