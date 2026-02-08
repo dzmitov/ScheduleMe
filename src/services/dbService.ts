@@ -1,6 +1,120 @@
-import type { Lesson } from '../../types';
+import type { Lesson, Teacher, School } from '../../types';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
+
+// --- Teachers ---
+function rowToTeacher(row: Record<string, unknown>): Teacher {
+  return {
+    id: String(row.id ?? ''),
+    firstName: String(row.firstName ?? row.first_name ?? ''),
+    lastName: String(row.lastName ?? row.last_name ?? ''),
+    color: String(row.color ?? '#6366f1'),
+  };
+}
+
+export async function fetchTeachers(): Promise<Teacher[]> {
+  const res = await fetch(`${API_BASE}/api/teachers`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`fetchTeachers failed: ${res.status} ${text}`);
+  }
+  const data = await res.json();
+  const rows = Array.isArray(data) ? data : (data.teachers ?? data.rows ?? []);
+  return rows.map((row: Record<string, unknown>) => rowToTeacher(row));
+}
+
+export async function addTeacher(teacher: Teacher): Promise<Teacher> {
+  const res = await fetch(`${API_BASE}/api/teachers`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(teacher),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`addTeacher failed: ${res.status} ${text}`);
+  }
+  const data = await res.json();
+  return rowToTeacher(data.teacher ?? data);
+}
+
+export async function updateTeacher(teacher: Teacher): Promise<Teacher> {
+  const res = await fetch(`${API_BASE}/api/teachers/${encodeURIComponent(teacher.id)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(teacher),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`updateTeacher failed: ${res.status} ${text}`);
+  }
+  const data = await res.json();
+  return rowToTeacher(data.teacher ?? data);
+}
+
+export async function deleteTeacher(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/teachers/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`deleteTeacher failed: ${res.status} ${text}`);
+  }
+}
+
+// --- Schools ---
+function rowToSchool(row: Record<string, unknown>): School {
+  return {
+    id: String(row.id ?? ''),
+    name: String(row.name ?? ''),
+  };
+}
+
+export async function fetchSchools(): Promise<School[]> {
+  const res = await fetch(`${API_BASE}/api/schools`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`fetchSchools failed: ${res.status} ${text}`);
+  }
+  const data = await res.json();
+  const rows = Array.isArray(data) ? data : (data.schools ?? data.rows ?? []);
+  return rows.map((row: Record<string, unknown>) => rowToSchool(row));
+}
+
+export async function addSchool(school: School): Promise<School> {
+  const res = await fetch(`${API_BASE}/api/schools`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(school),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`addSchool failed: ${res.status} ${text}`);
+  }
+  const data = await res.json();
+  return rowToSchool(data.school ?? data);
+}
+
+export async function updateSchool(school: School): Promise<School> {
+  const res = await fetch(`${API_BASE}/api/schools/${encodeURIComponent(school.id)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(school),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`updateSchool failed: ${res.status} ${text}`);
+  }
+  const data = await res.json();
+  return rowToSchool(data.school ?? data);
+}
+
+export async function deleteSchool(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/schools/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`deleteSchool failed: ${res.status} ${text}`);
+  }
+}
+
+// --- Lessons ---
 
 function rowToLesson(row: Record<string, unknown>): Lesson {
   return {

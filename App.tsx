@@ -4,17 +4,20 @@ import Sidebar from './components/Sidebar';
 import LessonCard from './components/LessonCard';
 import Login from './components/Login';
 import { Lesson, LessonStatus, ViewType, User, Teacher, School } from './types';
-import { fetchLessons, addLesson, updateLesson, deleteLesson } from './src/services/dbService';
-
-const INITIAL_TEACHERS: Teacher[] = [
-  { id: 't1', firstName: 'John', lastName: 'Doe', color: '#6366f1' },
-  { id: 't2', firstName: 'Jane', lastName: 'Smith', color: '#10b981' },
-];
-
-const INITIAL_SCHOOLS: School[] = [
-  { id: 's1', name: 'Lincoln High' },
-  { id: 's2', name: 'Westside Academy' },
-];
+import {
+  fetchLessons,
+  addLesson,
+  updateLesson,
+  deleteLesson,
+  fetchTeachers,
+  addTeacher,
+  updateTeacher,
+  deleteTeacher,
+  fetchSchools,
+  addSchool,
+  updateSchool,
+  deleteSchool,
+} from './src/services/dbService';
 
 const toLocalDateStr = (d: Date) => {
   const year = d.getFullYear();
@@ -27,17 +30,13 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [view, setView] = useState<ViewType>('dashboard');
   
-  const [teachers, setTeachers] = useState<Teacher[]>(() => {
-    const saved = localStorage.getItem('eduplan_teachers');
-    return saved ? JSON.parse(saved) : INITIAL_TEACHERS;
-  });
-  const [schools, setSchools] = useState<School[]>(() => {
-    const saved = localStorage.getItem('eduplan_schools');
-    return saved ? JSON.parse(saved) : INITIAL_SCHOOLS;
-  });
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [schools, setSchools] = useState<School[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
-  const [lessonsLoading, setLessonsLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [lessonsError, setLessonsError] = useState<string | null>(null);
+  const [teachersError, setTeachersError] = useState<string | null>(null);
+  const [schoolsError, setSchoolsError] = useState<string | null>(null);
 
   const [aiAdvice, setAiAdvice] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -59,16 +58,18 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    fetchLessons()
-      .then(setLessons)
-      .catch((err) => setLessonsError(err instanceof Error ? err.message : 'Failed to load lessons'))
-      .finally(() => setLessonsLoading(false));
+    Promise.all([
+      fetchLessons()
+        .then(setLessons)
+        .catch((err) => setLessonsError(err instanceof Error ? err.message : 'Failed to load lessons')),
+      fetchTeachers()
+        .then(setTeachers)
+        .catch((err) => setTeachersError(err instanceof Error ? err.message : 'Failed to load teachers')),
+      fetchSchools()
+        .then(setSchools)
+        .catch((err) => setSchoolsError(err instanceof Error ? err.message : 'Failed to load schools')),
+    ]).finally(() => setDataLoading(false));
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem('eduplan_teachers', JSON.stringify(teachers));
-    localStorage.setItem('eduplan_schools', JSON.stringify(schools));
-  }, [teachers, schools]);
 
 /*   useEffect(() => {
     if (user && lessons.length > 0) {
@@ -208,6 +209,78 @@ const App: React.FC = () => {
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : 'Failed to clone week');
+    }
+  };
+
+  const handleAddTeacher = async () => {
+    const newTeacher: Teacher = {
+      id: Math.random().toString(36).substr(2, 9),
+      firstName: 'New',
+      lastName: 'Staff',
+      color: '#6366f1',
+    };
+    try {
+      const saved = await addTeacher(newTeacher);
+      setTeachers((prev) => [...prev, saved]);
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Failed to add teacher');
+    }
+  };
+
+  const handleTeacherBlur = async (id: string) => {
+    const teacher = teachers.find((x) => x.id === id);
+    if (!teacher) return;
+    try {
+      await updateTeacher(teacher);
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Failed to save teacher');
+    }
+  };
+
+  const handleDeleteTeacher = async (id: string) => {
+    try {
+      await deleteTeacher(id);
+      setTeachers((prev) => prev.filter((t) => t.id !== id));
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Failed to delete teacher');
+    }
+  };
+
+  const handleAddSchool = async () => {
+    const newSchool: School = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: 'New Unit',
+    };
+    try {
+      const saved = await addSchool(newSchool);
+      setSchools((prev) => [...prev, saved]);
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Failed to add school');
+    }
+  };
+
+  const handleSchoolBlur = async (id: string) => {
+    const school = schools.find((x) => x.id === id);
+    if (!school) return;
+    try {
+      await updateSchool(school);
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Failed to save school');
+    }
+  };
+
+  const handleDeleteSchool = async (id: string) => {
+    try {
+      await deleteSchool(id);
+      setSchools((prev) => prev.filter((s) => s.id !== id));
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Failed to delete school');
     }
   };
 
@@ -395,11 +468,21 @@ const App: React.FC = () => {
       <main className="flex-1 flex flex-col overflow-hidden p-4 lg:p-12">
         {lessonsError && (
           <div className="mb-4 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-rose-800 text-sm font-medium">
-            {lessonsError}
+            Lessons: {lessonsError}
           </div>
         )}
-        {lessonsLoading && !lessonsError && (
-          <p className="text-slate-500 text-sm font-medium mb-2">Loading lessons...</p>
+        {teachersError && (
+          <div className="mb-4 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-rose-800 text-sm font-medium">
+            Teachers: {teachersError}
+          </div>
+        )}
+        {schoolsError && (
+          <div className="mb-4 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-rose-800 text-sm font-medium">
+            Schools: {schoolsError}
+          </div>
+        )}
+        {dataLoading && !lessonsError && !teachersError && !schoolsError && (
+          <p className="text-slate-500 text-sm font-medium mb-2">Loading...</p>
         )}
         {view === 'dashboard' && (
           <div className="space-y-8 lg:space-y-12 animate-fadeIn max-w-7xl mx-auto w-full overflow-y-auto custom-scrollbar pr-2">
@@ -443,25 +526,25 @@ const App: React.FC = () => {
             <header><h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Settings</h1><p className="text-slate-500 font-medium">Manage faculty and academic branches.</p></header>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
               <section className="space-y-6">
-                <div className="flex justify-between items-center px-2"><h2 className="text-xl lg:text-2xl font-black text-slate-800">Faculty</h2><button onClick={() => setTeachers([...teachers, { id: Math.random().toString(36).substr(2, 9), firstName: 'New', lastName: 'Staff', color: '#6366f1' }])} className="text-indigo-600 text-[10px] font-black hover:underline uppercase tracking-widest">+ STAFF</button></div>
+                <div className="flex justify-between items-center px-2"><h2 className="text-xl lg:text-2xl font-black text-slate-800">Faculty</h2><button onClick={handleAddTeacher} className="text-indigo-600 text-[10px] font-black hover:underline uppercase tracking-widest">+ STAFF</button></div>
                 <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden divide-y divide-slate-50">
                   {teachers.map(t => (
                     <div key={t.id} className="p-4 lg:p-5 flex items-center gap-4 hover:bg-slate-50/50 transition-colors">
-                      <input type="color" value={t.color} onChange={e => setTeachers(prev => prev.map(item => item.id === t.id ? { ...item, color: e.target.value } : item))} className="w-10 h-10 rounded-xl cursor-pointer border-2 border-white shadow-sm ring-2 ring-slate-100 shrink-0" />
-                      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-3"><input value={t.firstName} onChange={e => setTeachers(prev => prev.map(item => item.id === t.id ? { ...item, firstName: e.target.value } : item))} className="bg-slate-50 border-none rounded-lg px-3 py-2 text-sm font-bold text-slate-700 outline-none" placeholder="First Name" /><input value={t.lastName} onChange={e => setTeachers(prev => prev.map(item => item.id === t.id ? { ...item, lastName: e.target.value } : item))} className="bg-slate-50 border-none rounded-lg px-3 py-2 text-sm font-bold text-slate-700 outline-none" placeholder="Last Name" /></div>
-                      <button onClick={() => setTeachers(prev => prev.filter(item => item.id !== t.id))} className="text-slate-300 hover:text-rose-500 transition-colors shrink-0"><i className="fa-solid fa-trash-can"></i></button>
+                      <input type="color" value={t.color} onChange={e => setTeachers(prev => prev.map(item => item.id === t.id ? { ...item, color: e.target.value } : item))} onBlur={() => handleTeacherBlur(t.id)} className="w-10 h-10 rounded-xl cursor-pointer border-2 border-white shadow-sm ring-2 ring-slate-100 shrink-0" />
+                      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-3"><input value={t.firstName} onChange={e => setTeachers(prev => prev.map(item => item.id === t.id ? { ...item, firstName: e.target.value } : item))} onBlur={() => handleTeacherBlur(t.id)} className="bg-slate-50 border-none rounded-lg px-3 py-2 text-sm font-bold text-slate-700 outline-none" placeholder="First Name" /><input value={t.lastName} onChange={e => setTeachers(prev => prev.map(item => item.id === t.id ? { ...item, lastName: e.target.value } : item))} onBlur={() => handleTeacherBlur(t.id)} className="bg-slate-50 border-none rounded-lg px-3 py-2 text-sm font-bold text-slate-700 outline-none" placeholder="Last Name" /></div>
+                      <button onClick={() => handleDeleteTeacher(t.id)} className="text-slate-300 hover:text-rose-500 transition-colors shrink-0"><i className="fa-solid fa-trash-can"></i></button>
                     </div>
                   ))}
                 </div>
               </section>
               <section className="space-y-6">
-                <div className="flex justify-between items-center px-2"><h2 className="text-xl lg:text-2xl font-black text-slate-800">Branches</h2><button onClick={() => setSchools([...schools, { id: Math.random().toString(36).substr(2, 9), name: 'New Unit' }])} className="text-indigo-600 text-[10px] font-black hover:underline uppercase tracking-widest">+ UNIT</button></div>
+                <div className="flex justify-between items-center px-2"><h2 className="text-xl lg:text-2xl font-black text-slate-800">Branches</h2><button onClick={handleAddSchool} className="text-indigo-600 text-[10px] font-black hover:underline uppercase tracking-widest">+ UNIT</button></div>
                 <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden divide-y divide-slate-50">
                   {schools.map(s => (
                     <div key={s.id} className="p-4 lg:p-5 flex items-center gap-4 hover:bg-slate-50/50 transition-colors">
                       <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black shrink-0">U</div>
-                      <input value={s.name} onChange={e => setSchools(prev => prev.map(item => item.id === s.id ? { ...item, name: e.target.value } : item))} className="flex-1 bg-slate-50 border-none rounded-lg px-4 py-3 text-sm font-bold text-slate-700 outline-none" placeholder="Branch Name" />
-                      <button onClick={() => setSchools(prev => prev.filter(item => item.id !== s.id))} className="text-slate-300 hover:text-rose-500 transition-colors shrink-0"><i className="fa-solid fa-trash-can"></i></button>
+                      <input value={s.name} onChange={e => setSchools(prev => prev.map(item => item.id === s.id ? { ...item, name: e.target.value } : item))} onBlur={() => handleSchoolBlur(s.id)} className="flex-1 bg-slate-50 border-none rounded-lg px-4 py-3 text-sm font-bold text-slate-700 outline-none" placeholder="Branch Name" />
+                      <button onClick={() => handleDeleteSchool(s.id)} className="text-slate-300 hover:text-rose-500 transition-colors shrink-0"><i className="fa-solid fa-trash-can"></i></button>
                     </div>
                   ))}
                 </div>
