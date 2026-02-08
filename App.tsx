@@ -4,7 +4,7 @@ import Sidebar from './components/Sidebar';
 import LessonCard from './components/LessonCard';
 import Login from './components/Login';
 import { Lesson, LessonStatus, ViewType, User, Teacher, School } from './types';
-import { getScheduleAdvice } from './services/geminiService';
+//import { getScheduleAdvice } from './services/geminiService';
 
 const INITIAL_TEACHERS: Teacher[] = [
   { id: 't1', firstName: 'John', lastName: 'Doe', color: '#6366f1' },
@@ -65,11 +65,11 @@ const App: React.FC = () => {
     localStorage.setItem('eduplan_schools', JSON.stringify(schools));
   }, [lessons, teachers, schools]);
 
-  useEffect(() => {
+/*   useEffect(() => {
     if (user && lessons.length > 0) {
       getScheduleAdvice(lessons).then(setAiAdvice).catch(console.error);
     }
-  }, [user]);
+  }, [user]); */
 
   const stats = useMemo(() => ({ total: lessons.length }), [lessons]);
 
