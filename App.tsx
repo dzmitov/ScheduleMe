@@ -4,7 +4,7 @@ import Sidebar from './components/Sidebar';
 import LessonCard from './components/LessonCard';
 import Login from './components/Login';
 import { Lesson, LessonStatus, ViewType, User, Teacher, School } from './types';
-//import { getScheduleAdvice } from './services/geminiService';
+import { fetchLessons, addLesson, updateLesson, deleteLesson } from './src/services/dbService';
 
 const INITIAL_TEACHERS: Teacher[] = [
   { id: 't1', firstName: 'John', lastName: 'Doe', color: '#6366f1' },
@@ -35,10 +35,9 @@ const App: React.FC = () => {
     const saved = localStorage.getItem('eduplan_schools');
     return saved ? JSON.parse(saved) : INITIAL_SCHOOLS;
   });
-  const [lessons, setLessons] = useState<Lesson[]>(() => {
-    const saved = localStorage.getItem('eduplan_lessons');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [lessonsLoading, setLessonsLoading] = useState(true);
+  const [lessonsError, setLessonsError] = useState<string | null>(null);
 
   const [aiAdvice, setAiAdvice] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -60,10 +59,16 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('eduplan_lessons', JSON.stringify(lessons));
+    fetchLessons()
+      .then(setLessons)
+      .catch((err) => setLessonsError(err instanceof Error ? err.message : 'Failed to load lessons'))
+      .finally(() => setLessonsLoading(false));
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem('eduplan_teachers', JSON.stringify(teachers));
     localStorage.setItem('eduplan_schools', JSON.stringify(schools));
-  }, [lessons, teachers, schools]);
+  }, [teachers, schools]);
 
 /*   useEffect(() => {
     if (user && lessons.length > 0) {
@@ -124,26 +129,37 @@ const App: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleSaveLesson = (e: React.FormEvent) => {
+  const handleSaveLesson = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingLesson || !isAdmin) return;
     let finalSchoolId = editingLesson.schoolId || (schools.length > 0 ? schools[0].id : '');
     const l = { ...editingLesson, schoolId: finalSchoolId, subject: 'English', status: LessonStatus.UPCOMING } as Lesson;
-    setLessons(prev => {
-      const idx = prev.findIndex(item => item.id === l.id);
-      if (idx !== -1) {
-        const next = [...prev];
-        next[idx] = l;
-        return next;
+    const isUpdate = lessons.some((item) => item.id === l.id);
+    try {
+      if (isUpdate) {
+        await updateLesson(l);
+      } else {
+        await addLesson(l);
       }
-      return [...prev, l];
-    });
-    setIsModalOpen(false);
-    setEditingLesson(null);
+      setLessons((prev) => {
+        const idx = prev.findIndex((item) => item.id === l.id);
+        if (idx !== -1) {
+          const next = [...prev];
+          next[idx] = l;
+          return next;
+        }
+        return [...prev, l];
+      });
+      setIsModalOpen(false);
+      setEditingLesson(null);
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Failed to save lesson');
+    }
   };
 
   // ROBUST DELETE LOGIC
-  const handleDeleteCurrentLesson = () => {
+  const handleDeleteCurrentLesson = async () => {
     if (!isAdmin || !editingLesson?.id) return;
     
     // Check if it's a real lesson that exists in state
@@ -153,21 +169,27 @@ const App: React.FC = () => {
     const confirmMessage = "Are you sure you want to permanently delete this lesson? This action cannot be undone.";
     if (window.confirm(confirmMessage)) {
       const idToDelete = editingLesson.id;
-      setLessons(currentLessons => currentLessons.filter(lesson => lesson.id !== idToDelete));
-      setIsModalOpen(false);
-      setEditingLesson(null);
+      try {
+        await deleteLesson(idToDelete);
+        setLessons((currentLessons) => currentLessons.filter((lesson) => lesson.id !== idToDelete));
+        setIsModalOpen(false);
+        setEditingLesson(null);
+      } catch (err) {
+        console.error(err);
+        alert(err instanceof Error ? err.message : 'Failed to delete lesson');
+      }
     }
   };
 
-  const handleCopyWeek = () => {
+  const handleCopyWeek = async () => {
     if (!isAdmin) return;
-    const dayStrings = weekDays.map(d => toLocalDateStr(d));
-    const currentWeekLessons = lessons.filter(l => dayStrings.includes(l.date));
+    const dayStrings = weekDays.map((d) => toLocalDateStr(d));
+    const currentWeekLessons = lessons.filter((l) => dayStrings.includes(l.date));
     if (currentWeekLessons.length === 0) {
-      alert("No sessions found to duplicate.");
+      alert('No sessions found to duplicate.');
       return;
     }
-    const newLessons = currentWeekLessons.map(l => {
+    const newLessons = currentWeekLessons.map((l) => {
       const d = new Date(l.date);
       d.setDate(d.getDate() + 7);
       return {
@@ -175,12 +197,18 @@ const App: React.FC = () => {
         id: Math.random().toString(36).substr(2, 9),
         date: toLocalDateStr(d),
         teacherId: copyKeepTeachers ? l.teacherId : '',
-        status: LessonStatus.UPCOMING
+        status: LessonStatus.UPCOMING,
       };
     });
-    setLessons(prev => [...prev, ...newLessons]);
-    setIsCopyWeekModalOpen(false);
-    alert(`Successfully cloned ${newLessons.length} sessions.`);
+    try {
+      await Promise.all(newLessons.map((lesson) => addLesson(lesson)));
+      setLessons((prev) => [...prev, ...newLessons]);
+      setIsCopyWeekModalOpen(false);
+      alert(`Successfully cloned ${newLessons.length} sessions.`);
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Failed to clone week');
+    }
   };
 
   if (!user) return <Login onLogin={setUser} />;
@@ -365,6 +393,14 @@ const App: React.FC = () => {
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">
       <Sidebar currentView={view} onViewChange={(v) => { setView(v); setFocusedDay(null); }} user={user} onLogout={() => { setUser(null); setView('dashboard'); }} />
       <main className="flex-1 flex flex-col overflow-hidden p-4 lg:p-12">
+        {lessonsError && (
+          <div className="mb-4 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-rose-800 text-sm font-medium">
+            {lessonsError}
+          </div>
+        )}
+        {lessonsLoading && !lessonsError && (
+          <p className="text-slate-500 text-sm font-medium mb-2">Loading lessons...</p>
+        )}
         {view === 'dashboard' && (
           <div className="space-y-8 lg:space-y-12 animate-fadeIn max-w-7xl mx-auto w-full overflow-y-auto custom-scrollbar pr-2">
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
