@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useUser } from '@clerk/clerk-react';
 import Sidebar from './components/Sidebar';
 import LessonCard from './components/LessonCard';
-import Login from './components/Login';
-import { Lesson, LessonStatus, ViewType, User, Teacher, School } from './types';
+import { Lesson, LessonStatus, ViewType, Teacher, School } from './types';
 import {
   fetchLessons,
   addLesson,
@@ -27,7 +27,7 @@ const toLocalDateStr = (d: Date) => {
 };
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const { user, isSignedIn, isLoaded } = useUser();
   const [view, setView] = useState<ViewType>('dashboard');
   
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -49,7 +49,8 @@ const App: React.FC = () => {
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
-  const isAdmin = user?.role === 'admin';
+  // Admin check: only dzmitov@gmail.com is admin
+  const isAdmin = user?.primaryEmailAddress?.emailAddress === 'dzmitov@gmail.com';
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
@@ -284,7 +285,33 @@ const App: React.FC = () => {
     }
   };
 
-  if (!user) return <Login onLogin={setUser} />;
+  // Show loading state while Clerk is initializing
+  if (!isLoaded) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <i className="fa-solid fa-spinner fa-spin text-4xl text-indigo-600 mb-4"></i>
+          <p className="text-slate-600 font-medium">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If not signed in, show the sidebar with sign-in button
+  if (!isSignedIn || !user) {
+    return (
+      <div className="flex h-screen w-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">
+        <Sidebar currentView={view} onViewChange={setView} />
+        <main className="flex-1 flex items-center justify-center p-12">
+          <div className="text-center max-w-md">
+            <i className="fa-solid fa-graduation-cap text-6xl text-indigo-600 mb-6"></i>
+            <h1 className="text-4xl font-black text-slate-900 mb-4">Welcome to ScheduleMe</h1>
+            <p className="text-slate-600 font-medium mb-8">Please sign in to access your schedule and manage lessons.</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   const timeSlots = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00"];
 
@@ -464,7 +491,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">
-      <Sidebar currentView={view} onViewChange={(v) => { setView(v); setFocusedDay(null); }} user={user} onLogout={() => { setUser(null); setView('dashboard'); }} />
+      <Sidebar currentView={view} onViewChange={(v) => { setView(v); setFocusedDay(null); }} />
       <main className="flex-1 flex flex-col overflow-hidden p-4 lg:p-12">
         {lessonsError && (
           <div className="mb-4 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-rose-800 text-sm font-medium">
@@ -487,7 +514,7 @@ const App: React.FC = () => {
         {view === 'dashboard' && (
           <div className="space-y-8 lg:space-y-12 animate-fadeIn max-w-7xl mx-auto w-full overflow-y-auto custom-scrollbar pr-2">
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div><h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Overview</h1><p className="text-slate-500 mt-2 font-medium flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>Session active for <span className="text-indigo-600 font-bold">{user.name}</span></p></div>
+              <div><h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Overview</h1><p className="text-slate-500 mt-2 font-medium flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>Session active for <span className="text-indigo-600 font-bold">{user.fullName || user.firstName || 'User'}</span></p></div>
               {isAdmin && <button onClick={() => openEditModal()} className="bg-indigo-600 text-white px-8 py-4 rounded-[1.5rem] font-black shadow-2xl shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-1 transition-all active:translate-y-0 text-sm lg:text-base">+ New Session</button>}
             </header>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
