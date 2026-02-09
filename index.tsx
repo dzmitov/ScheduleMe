@@ -4,10 +4,12 @@ import { ClerkProvider } from '@clerk/clerk-react';
 import './index.css';
 import App from './App';
 
-const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+// Vite exposes env variables through import.meta.env
+const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string;
 
 if (!PUBLISHABLE_KEY) {
-  throw new Error("Missing Clerk Publishable Key");
+  console.error("VITE_CLERK_PUBLISHABLE_KEY is missing. Please check your .env.local file.");
+  throw new Error("Missing Clerk Publishable Key. Add VITE_CLERK_PUBLISHABLE_KEY to your .env.local file.");
 }
 
 const rootElement = document.getElementById('root');
