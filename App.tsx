@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import Sidebar from './components/Sidebar';
 import LessonCard from './components/LessonCard';
-import { Lesson, LessonStatus, ViewType, Teacher, School } from './types';
+import { Lesson, LessonStatus, ViewType, Teacher, School, AppUser } from './types';
 import {
   fetchLessons,
   addLesson,
@@ -17,6 +17,11 @@ import {
   addSchool,
   updateSchool,
   deleteSchool,
+  fetchUsers,
+  addUser,
+  updateUser,
+  deleteUser,
+  checkUserRole,
 } from './src/services/dbService';
 
 const toLocalDateStr = (d: Date) => {
@@ -33,10 +38,12 @@ const App: React.FC = () => {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [schools, setSchools] = useState<School[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [users, setUsers] = useState<AppUser[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [lessonsError, setLessonsError] = useState<string | null>(null);
   const [teachersError, setTeachersError] = useState<string | null>(null);
   const [schoolsError, setSchoolsError] = useState<string | null>(null);
+  const [usersError, setUsersError] = useState<string | null>(null);
 
   const [aiAdvice, setAiAdvice] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -48,9 +55,12 @@ const App: React.FC = () => {
   const [editingLesson, setEditingLesson] = useState<Partial<Lesson> | null>(null);
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  const [userRole, setUserRole] = useState<{ isAdmin: boolean; role: string; teacherId?: string; userId?: string } | null>(null);
+  const [editingUser, setEditingUser] = useState<Partial<AppUser> | null>(null);
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
 
-  // Admin check: only dzmitov@gmail.com is admin
-  const isAdmin = user?.primaryEmailAddress?.emailAddress === 'dzmitov@gmail.com';
+  // Admin check using the database
+  const isAdmin = userRole?.isAdmin || false;
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
@@ -58,6 +68,32 @@ const App: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Check user role when signed in
+  useEffect(() => {
+    if (isSignedIn && user?.primaryEmailAddress?.emailAddress) {
+      const email = user.primaryEmailAddress.emailAddress;
+      
+      // Add debugger for role verification
+      debugger;
+      
+      checkUserRole(email)
+        .then(role => {
+          console.log('User role:', role); // For debugging
+          setUserRole(role);
+        })
+        .catch(err => {
+          console.error('Error checking user role:', err);
+          // Fallback to default admin if it's dzmitov@gmail.com
+          if (email === 'dzmitov@gmail.com') {
+            setUserRole({ isAdmin: true, role: 'admin' });
+          } else {
+            setUserRole({ isAdmin: false, role: 'viewer' });
+          }
+        });
+    }
+  }, [isSignedIn, user]);
+
+  // Load application data
   useEffect(() => {
     Promise.all([
       fetchLessons()
@@ -69,6 +105,9 @@ const App: React.FC = () => {
       fetchSchools()
         .then(setSchools)
         .catch((err) => setSchoolsError(err instanceof Error ? err.message : 'Failed to load schools')),
+      fetchUsers()
+        .then(setUsers)
+        .catch((err) => setUsersError(err instanceof Error ? err.message : 'Failed to load users')),
     ]).finally(() => setDataLoading(false));
   }, []);
 
@@ -550,7 +589,7 @@ const App: React.FC = () => {
         )}
         {view === 'settings' && isAdmin && (
           <div className="space-y-12 animate-fadeIn max-w-5xl mx-auto w-full overflow-y-auto custom-scrollbar pr-2 pb-20">
-            <header><h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Settings</h1><p className="text-slate-500 font-medium">Manage faculty and academic branches.</p></header>
+            <header><h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Settings</h1><p className="text-slate-500 font-medium">Manage faculty, academic branches, and user access.</p></header>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
               <section className="space-y-6">
                 <div className="flex justify-between items-center px-2"><h2 className="text-xl lg:text-2xl font-black text-slate-800">Faculty</h2><button onClick={handleAddTeacher} className="text-indigo-600 text-[10px] font-black hover:underline uppercase tracking-widest">+ STAFF</button></div>
@@ -577,6 +616,75 @@ const App: React.FC = () => {
                 </div>
               </section>
             </div>
+            
+            {/* User Management Section */}
+            <section className="space-y-6 mt-12">
+              <div className="flex justify-between items-center px-2">
+                <h2 className="text-xl lg:text-2xl font-black text-slate-800">User Access</h2>
+                <button 
+                  onClick={() => {
+                    setEditingUser({
+                      id: Math.random().toString(36).substring(2, 11),
+                      email: '',
+                      role: 'viewer'
+                    });
+                    setIsUserModalOpen(true);
+                  }} 
+                  className="text-indigo-600 text-[10px] font-black hover:underline uppercase tracking-widest"
+                >
+                  + USER
+                </button>
+              </div>
+              <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+                <div className="p-4 bg-slate-50 border-b border-slate-100">
+                  <div className="grid grid-cols-12 gap-4">
+                    <div className="col-span-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Email</div>
+                    <div className="col-span-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Role</div>
+                    <div className="col-span-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Teacher</div>
+                    <div className="col-span-1 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Actions</div>
+                  </div>
+                </div>
+                <div className="divide-y divide-slate-50">
+                  {users.map(user => (
+                    <div key={user.id} className="p-4 hover:bg-slate-50/50 transition-colors">
+                      <div className="grid grid-cols-12 gap-4 items-center">
+                        <div className="col-span-5 font-medium text-slate-700 truncate">{user.email}</div>
+                        <div className="col-span-3">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            user.role === 'admin' 
+                              ? 'bg-indigo-100 text-indigo-800' 
+                              : user.role === 'teacher' 
+                                ? 'bg-emerald-100 text-emerald-800' 
+                                : 'bg-slate-100 text-slate-800'
+                          }`}>
+                            {user.role === 'admin' ? 'Administrator' : user.role === 'teacher' ? 'Teacher' : 'Viewer'}
+                          </span>
+                        </div>
+                        <div className="col-span-3 text-sm text-slate-500 truncate">
+                          {user.teacherName || (user.teacherId ? 'Assigned' : '-')}
+                        </div>
+                        <div className="col-span-1 flex justify-center">
+                          <button 
+                            onClick={() => {
+                              setEditingUser(user);
+                              setIsUserModalOpen(true);
+                            }}
+                            className="text-slate-400 hover:text-indigo-600 transition-colors"
+                          >
+                            <i className="fa-solid fa-pen-to-square"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {users.length === 0 && (
+                    <div className="p-8 text-center text-slate-400">
+                      <p>No users found. Add your first user to get started.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
           </div>
         )}
         {view === 'admin-manage' && (
@@ -647,6 +755,132 @@ const App: React.FC = () => {
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+      
+      {/* User Edit Modal */}
+      {isUserModalOpen && editingUser && (
+        <div className="fixed inset-0 z-[210] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn">
+          <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl p-6 lg:p-8 relative">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-black text-slate-800 tracking-tight">
+                {editingUser.id && users.some(u => u.id === editingUser.id) ? 'Edit User' : 'New User'}
+              </h2>
+              <button 
+                onClick={() => { 
+                  setIsUserModalOpen(false); 
+                  setEditingUser(null); 
+                }} 
+                className="w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center transition-all"
+              >
+                <i className="fa-solid fa-xmark text-slate-400 text-xl"></i>
+              </button>
+            </div>
+            
+            <form 
+              id="user-form" 
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!editingUser || !isAdmin) return;
+                
+                try {
+                  const isUpdate = users.some(u => u.id === editingUser.id);
+                  let savedUser;
+                  
+                  if (isUpdate) {
+                    savedUser = await updateUser(editingUser as AppUser);
+                    setUsers(prev => prev.map(u => u.id === savedUser.id ? savedUser : u));
+                  } else {
+                    savedUser = await addUser(editingUser as AppUser);
+                    setUsers(prev => [...prev, savedUser]);
+                  }
+                  
+                  setIsUserModalOpen(false);
+                  setEditingUser(null);
+                } catch (err) {
+                  console.error(err);
+                  alert(err instanceof Error ? err.message : 'Failed to save user');
+                }
+              }} 
+              className="space-y-6"
+            >
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                <input 
+                  type="email" 
+                  required 
+                  value={editingUser.email} 
+                  onChange={e => setEditingUser({...editingUser, email: e.target.value})} 
+                  className="w-full bg-slate-50 border-none rounded-xl px-5 py-3 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 text-sm" 
+                  placeholder="user@example.com"
+                  disabled={editingUser.email === 'dzmitov@gmail.com'} // Prevent changing the default admin email
+                />
+                {editingUser.email === 'dzmitov@gmail.com' && (
+                  <p className="text-xs text-amber-600 ml-1 mt-1">Default admin email cannot be changed</p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Role</label>
+                <select 
+                  required 
+                  value={editingUser.role} 
+                  onChange={e => setEditingUser({...editingUser, role: e.target.value as AppUser['role']})} 
+                  className="w-full bg-slate-50 border-none rounded-xl px-5 py-3 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 text-sm"
+                >
+                  <option value="admin">Administrator</option>
+                  <option value="teacher">Teacher</option>
+                  <option value="viewer">Viewer</option>
+                </select>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Linked Teacher (Optional)</label>
+                <select 
+                  value={editingUser.teacherId || ''} 
+                  onChange={e => setEditingUser({...editingUser, teacherId: e.target.value || undefined})} 
+                  className="w-full bg-slate-50 border-none rounded-xl px-5 py-3 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 text-sm"
+                >
+                  <option value="">No Teacher Link</option>
+                  {teachers.map(t => (
+                    <option key={t.id} value={t.id}>{t.firstName} {t.lastName}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-500 ml-1 mt-1">Link to a teacher account for calendar access</p>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-8">
+                {editingUser.id && users.some(u => u.id === editingUser.id) && editingUser.email !== 'dzmitov@gmail.com' ? (
+                  <button 
+                    type="button" 
+                    onClick={async () => {
+                      if (!editingUser.id || !window.confirm('Are you sure you want to delete this user?')) return;
+                      
+                      try {
+                        await deleteUser(editingUser.id);
+                        setUsers(prev => prev.filter(u => u.id !== editingUser.id));
+                        setIsUserModalOpen(false);
+                        setEditingUser(null);
+                      } catch (err) {
+                        console.error(err);
+                        alert(err instanceof Error ? err.message : 'Failed to delete user');
+                      }
+                    }} 
+                    className="w-full sm:w-auto text-rose-500 font-black hover:bg-rose-50 px-6 py-3 rounded-xl transition-all text-xs uppercase tracking-widest border border-transparent hover:border-rose-100"
+                  >
+                    Delete User
+                  </button>
+                ) : <div className="hidden sm:block"></div>}
+                
+                <button 
+                  type="submit" 
+                  className="w-full sm:flex-1 bg-indigo-600 text-white font-black py-3 rounded-xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all text-xs uppercase tracking-widest"
+                >
+                  Save User
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

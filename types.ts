@@ -5,7 +5,15 @@ export enum LessonStatus {
   CANCELLED = 'cancelled'
 }
 
-export type Role = 'admin' | 'user';
+export type Role = 'admin' | 'teacher' | 'viewer';
+
+export interface AppUser {
+  id: string;
+  email: string;
+  role: Role;
+  teacherId?: string;
+  teacherName?: string;
+}
 
 export interface User {
   id: string;

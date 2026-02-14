@@ -1,4 +1,5 @@
-import type { Lesson, Teacher, School } from '../../types';
+import { LessonStatus } from '../../types';
+import type { Lesson, Teacher, School, AppUser } from '../../types';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
 
@@ -127,7 +128,7 @@ function rowToLesson(row: Record<string, unknown>): Lesson {
     startTime: String(row.startTime ?? row.start_time ?? ''),
     endTime: String(row.endTime ?? row.end_time ?? ''),
     room: String(row.room ?? ''),
-    status: (row.status as Lesson['status']) ?? 'upcoming',
+  status: (row.status as LessonStatus) ?? LessonStatus.UPCOMING,
     topic: row.topic != null ? String(row.topic) : undefined,
     notes: row.notes != null ? String(row.notes) : undefined,
   };
@@ -191,5 +192,119 @@ export async function deleteLesson(id: string): Promise<void> {
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`deleteLesson failed: ${res.status} ${text}`);
+  }
+}
+
+// --- Users ---
+
+function rowToAppUser(row: Record<string, unknown>): AppUser {
+  return {
+    id: String(row.id ?? ''),
+    email: String(row.email ?? ''),
+    role: String(row.role ?? 'viewer') as AppUser['role'],
+    teacherId: row.teacher_id ? String(row.teacher_id) : undefined,
+    teacherName: row.teacher_first_name && row.teacher_last_name 
+      ? `${row.teacher_first_name} ${row.teacher_last_name}` 
+      : undefined
+  };
+}
+
+/**
+ * Загружает всех пользователей из таблицы app_users.
+ */
+export async function fetchUsers(): Promise<AppUser[]> {
+  const res = await fetch(`${API_BASE}/api/users`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`fetchUsers failed: ${res.status} ${text}`);
+  }
+  const data = await res.json();
+  const rows = Array.isArray(data) ? data : (data.users ?? data.rows ?? []);
+  return rows.map((row: Record<string, unknown>) => rowToAppUser(row));
+}
+
+/**
+ * Проверяет роль пользователя по email.
+ * Возвращает объект с информацией о правах пользователя.
+ */
+export async function checkUserRole(email: string): Promise<{
+  isAdmin: boolean;
+  role: string;
+  teacherId?: string;
+  userId?: string;
+}> {
+  try {
+    // Fallback for default admin
+    if (email === 'dzmitov@gmail.com') {
+      return { isAdmin: true, role: 'admin' };
+    }
+
+    const users = await fetchUsers();
+    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    
+    if (!user) {
+      return { isAdmin: false, role: 'viewer' };
+    }
+    
+    return {
+      isAdmin: user.role === 'admin',
+      role: user.role,
+      teacherId: user.teacherId,
+      userId: user.id
+    };
+  } catch (error) {
+    console.error('Error checking user role:', error);
+    // Fallback for default admin if database check fails
+    if (email === 'dzmitov@gmail.com') {
+      return { isAdmin: true, role: 'admin' };
+    }
+    return { isAdmin: false, role: 'viewer' };
+  }
+}
+
+/**
+ * Добавляет нового пользователя в таблицу app_users.
+ */
+export async function addUser(user: AppUser): Promise<AppUser> {
+  const res = await fetch(`${API_BASE}/api/users`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(user),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`addUser failed: ${res.status} ${text}`);
+  }
+  const data = await res.json();
+  return rowToAppUser(data.user ?? data);
+}
+
+/**
+ * Обновляет пользователя в таблице app_users.
+ */
+export async function updateUser(user: AppUser): Promise<AppUser> {
+  const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(user.id)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(user),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`updateUser failed: ${res.status} ${text}`);
+  }
+  const data = await res.json();
+  return rowToAppUser(data.user ?? data);
+}
+
+/**
+ * Удаляет пользователя по id.
+ */
+export async function deleteUser(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`deleteUser failed: ${res.status} ${text}`);
   }
 }
