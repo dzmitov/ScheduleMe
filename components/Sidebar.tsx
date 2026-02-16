@@ -41,7 +41,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) => {
     { id: 'schedule', label: 'Schedule', icon: 'fa-calendar-days', roles: ['admin', 'user'] },
     { id: 'admin-manage', label: 'Lesson Feed', icon: 'fa-list-check', roles: ['admin'] },
     { id: 'reports', label: 'Analytics', icon: 'fa-chart-pie', roles: ['admin'] },
-    { id: 'ai-planner', label: 'AI Planner', icon: 'fa-wand-magic-sparkles', roles: ['admin'] },
+//    { id: 'ai-planner', label: 'AI Planner', icon: 'fa-wand-magic-sparkles', roles: ['admin'] },
     { id: 'settings', label: 'Settings', icon: 'fa-gears', roles: ['admin'] },
   ];
   
