@@ -358,36 +358,36 @@ const App: React.FC = () => {
     const dateStr = toLocalDateStr(day);
     if (isMobile) {
       return (
-        <div className="flex-1 flex flex-col min-h-0 animate-fadeIn space-y-4">
-          <div className="grid grid-cols-2 gap-2 shrink-0">
-            <div className="flex flex-col gap-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Branch</label>
-              <select value={selectedSchoolId} onChange={(e) => setSelectedSchoolId(e.target.value)} className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 appearance-none shadow-sm">
+        <div className="flex-1 flex flex-col min-h-0 animate-fadeIn space-y-2">
+          <div className="grid grid-cols-2 gap-1.5 shrink-0">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-1">Branch</label>
+              <select value={selectedSchoolId} onChange={(e) => setSelectedSchoolId(e.target.value)} className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 appearance-none shadow-sm">
                 <option value="all">All Units</option>
                 {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Staff</label>
-              <select value={selectedTeacherId} onChange={(e) => setSelectedTeacherId(e.target.value)} className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 appearance-none shadow-sm">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-1">Staff</label>
+              <select value={selectedTeacherId} onChange={(e) => setSelectedTeacherId(e.target.value)} className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 appearance-none shadow-sm">
                 <option value="all">All Faculty</option>
                 {teachers.map(t => <option key={t.id} value={t.id}>{t.lastName}, {t.firstName[0]}.</option>)}
               </select>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
             {timeSlots.map(time => {
               const hour = parseInt(time.split(':')[0]);
               const timeLessons = lessons.filter(l => l.date === dateStr && parseInt(l.startTime.split(':')[0]) === hour && (selectedSchoolId === 'all' || l.schoolId === selectedSchoolId) && (selectedTeacherId === 'all' || l.teacherId === selectedTeacherId));
               if (timeLessons.length === 0 && !isAdmin) return null;
               return (
-                <div key={time} className="flex gap-3">
-                  <div className="w-10 text-right shrink-0 pt-1.5"><span className="text-[9px] font-black text-slate-400 font-mono">{time}</span></div>
-                  <div className="flex-1 space-y-2">
+                <div key={time} className="flex gap-1.5">
+                  <div className="w-7 text-right shrink-0 pt-1"><span className="text-[8px] font-black text-slate-400 font-mono">{time}</span></div>
+                  <div className="flex-1 space-y-1">
                     {timeLessons.map(l => <LessonCard key={l.id} lesson={l} teachers={teachers} schools={schools} isAdmin={isAdmin} compact={true} onEdit={openEditModal} />)}
                     {isAdmin && (
-                      <button onClick={() => openEditModal(undefined, { date: dateStr, startTime: time })} className="w-full h-8 border border-dashed border-slate-100 rounded-lg flex items-center justify-center text-slate-300 text-[8px] font-black hover:border-indigo-100 hover:text-indigo-400 transition-all">
-                        <i className="fa-solid fa-plus mr-1"></i> {timeLessons.length > 0 ? 'ADD MORE' : `ADD AT ${time}`}
+                      <button onClick={() => openEditModal(undefined, { date: dateStr, startTime: time })} className="w-full h-6 border border-dashed border-slate-100 rounded-md flex items-center justify-center text-slate-300 text-[7px] font-black hover:border-indigo-100 hover:text-indigo-400 transition-all">
+                        <i className="fa-solid fa-plus mr-0.5"></i> {timeLessons.length > 0 ? 'ADD MORE' : `ADD AT ${time}`}
                       </button>
                     )}
                   </div>
@@ -400,15 +400,15 @@ const App: React.FC = () => {
     }
     const filteredSchools = selectedSchoolId === 'all' ? schools : schools.filter(s => s.id === selectedSchoolId);
     return (
-      <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden flex-1 flex flex-col min-h-0 animate-fadeIn">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden flex-1 flex flex-col min-h-0 animate-fadeIn">
         <div className="overflow-auto flex-1 relative custom-scrollbar">
           <table className="w-full border-collapse table-fixed min-w-[800px]">
             <thead>
               <tr className="bg-slate-50">
-                <th className="sticky top-0 left-0 z-50 w-24 p-4 text-[11px] font-black text-slate-800 uppercase tracking-widest text-center border-r border-b border-slate-200 bg-slate-50 shadow-[2px_0_0_0_#e2e8f0]">TIME</th>
+                <th className="sticky top-0 left-0 z-50 w-16 p-2 text-[9px] font-black text-slate-800 uppercase tracking-widest text-center border-r border-b border-slate-200 bg-slate-50 shadow-[2px_0_0_0_#e2e8f0]">TIME</th>
                 {filteredSchools.map(school => (
-                  <th key={school.id} className="sticky top-0 z-40 p-4 border-l border-b border-slate-200 bg-slate-50">
-                    <div className="flex flex-col items-center"><span className="text-[11px] font-black text-indigo-600 uppercase tracking-widest truncate max-w-full" title={school.name}>{school.name}</span></div>
+                  <th key={school.id} className="sticky top-0 z-40 p-2 border-l border-b border-slate-200 bg-slate-50">
+                    <div className="flex flex-col items-center"><span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest truncate max-w-full" title={school.name}>{school.name}</span></div>
                   </th>
                 ))}
               </tr>
@@ -416,23 +416,23 @@ const App: React.FC = () => {
             <tbody>
               {timeSlots.map(time => (
                 <tr key={time} className="group border-b border-slate-100 last:border-0">
-                  <td className="sticky left-0 z-30 p-4 text-xs font-black text-slate-400 text-center bg-slate-50/50 backdrop-blur-sm font-mono border-r border-slate-200 shadow-[2px_0_0_0_#e2e8f0]">{time}</td>
+                  <td className="sticky left-0 z-30 p-2 text-[10px] font-black text-slate-400 text-center bg-slate-50/50 backdrop-blur-sm font-mono border-r border-slate-200 shadow-[2px_0_0_0_#e2e8f0]">{time}</td>
                   {filteredSchools.map(school => {
                     const hour = parseInt(time.split(':')[0]);
                     const cellLessons = lessons.filter(l => l.date === dateStr && parseInt(l.startTime.split(':')[0]) === hour && l.schoolId === school.id);
                     return (
-                      <td key={`${school.id}-${time}`} className="p-2 border-l border-slate-100 relative align-top hover:bg-slate-50/40 group/cell transition-colors cursor-pointer" onClick={() => openEditModal(undefined, { date: dateStr, startTime: time, schoolId: school.id })}>
-                        <div className="flex flex-col gap-1.5 h-full min-h-[60px]">
+                      <td key={`${school.id}-${time}`} className="p-1 border-l border-slate-100 relative align-top hover:bg-slate-50/40 group/cell transition-colors cursor-pointer" onClick={() => openEditModal(undefined, { date: dateStr, startTime: time, schoolId: school.id })}>
+                        <div className="flex flex-col gap-1 h-full min-h-[45px]">
                           {cellLessons.map(l => {
                             const t = teachers.find(teacher => teacher.id === l.teacherId);
                             return (
-                              <div key={l.id} onClick={(e) => { e.stopPropagation(); openEditModal(l); }} className="p-2.5 rounded-xl border-l-4 shadow-sm transition-all hover:scale-[1.02] active:scale-95 group/card" style={{ backgroundColor: `${t?.color || '#6366f1'}15`, borderLeftColor: t?.color || '#cbd5e1' }}>
-                                <div className="flex justify-between items-start mb-1"><p className="text-[10px] font-black leading-tight text-slate-800 truncate" title={t ? `${t.firstName} ${t.lastName}` : 'TBA'}>{t ? t.lastName : 'TBA'}</p></div>
-                                <div className="flex flex-wrap items-center justify-between mt-1 gap-x-2"><p className="text-[9px] font-black text-slate-400 whitespace-nowrap">{l.startTime} – {l.endTime}</p><p className="text-[8px] font-bold text-slate-400">R{l.room}</p></div>
+                              <div key={l.id} onClick={(e) => { e.stopPropagation(); openEditModal(l); }} className="p-1.5 rounded-lg border-l-3 shadow-sm transition-all hover:scale-[1.02] active:scale-95 group/card" style={{ backgroundColor: `${t?.color || '#6366f1'}15`, borderLeftColor: t?.color || '#cbd5e1' }}>
+                                <div className="flex justify-between items-start"><p className="text-[9px] font-black leading-tight text-slate-800 truncate" title={t ? `${t.firstName} ${t.lastName}` : 'TBA'}>{t ? t.lastName : 'TBA'}</p></div>
+                                <div className="flex flex-wrap items-center justify-between gap-x-1"><p className="text-[8px] font-black text-slate-400 whitespace-nowrap">{l.startTime} – {l.endTime}</p><p className="text-[7px] font-bold text-slate-400">R{l.room}</p></div>
                               </div>
                             );
                           })}
-                          {isAdmin && <div className="opacity-0 group-hover/cell:opacity-100 flex items-center justify-center p-2 border-2 border-dashed border-slate-200 rounded-xl text-slate-300 text-[8px] font-black transition-all hover:border-indigo-300 hover:text-indigo-400"><i className="fa-solid fa-plus mr-1"></i> ADD</div>}
+                          {isAdmin && <div className="opacity-0 group-hover/cell:opacity-100 flex items-center justify-center p-1 border border-dashed border-slate-200 rounded-lg text-slate-300 text-[7px] font-black transition-all hover:border-indigo-300 hover:text-indigo-400"><i className="fa-solid fa-plus"></i></div>}
                         </div>
                       </td>
                     );
@@ -454,36 +454,36 @@ const App: React.FC = () => {
     });
     if (isMobile) {
       return (
-        <div className="flex-1 space-y-4 overflow-y-auto pr-1 custom-scrollbar animate-fadeIn">
+        <div className="flex-1 space-y-2 overflow-y-auto pr-1 custom-scrollbar animate-fadeIn">
           {dayConfigs.map(({ day, lessonCount }) => (
-            <button key={day.toISOString()} onClick={() => setFocusedDay(day)} className="w-full bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center justify-between group active:scale-[0.98] transition-all">
-              <div className="flex flex-col items-start"><span className="text-xs font-black text-indigo-600 uppercase tracking-widest">{day.toLocaleDateString('en-US', { weekday: 'long' })}</span><span className="text-lg font-bold text-slate-800">{day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span></div>
-              <div className="flex items-center gap-4">
-                <div className="text-right"><p className="text-xl font-black text-slate-900 leading-none">{lessonCount}</p><p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Sessions</p></div>
-                <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors"><i className="fa-solid fa-chevron-right"></i></div>
+            <button key={day.toISOString()} onClick={() => setFocusedDay(day)} className="w-full bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between group active:scale-[0.98] transition-all">
+              <div className="flex flex-col items-start"><span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">{day.toLocaleDateString('en-US', { weekday: 'long' })}</span><span className="text-base font-bold text-slate-800">{day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span></div>
+              <div className="flex items-center gap-2">
+                <div className="text-right"><p className="text-lg font-black text-slate-900 leading-none">{lessonCount}</p><p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Sessions</p></div>
+                <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors"><i className="fa-solid fa-chevron-right"></i></div>
               </div>
             </button>
           ))}
           {isAdmin && (
-            <div className="pt-4 px-2">
-               <button onClick={() => setIsCopyWeekModalOpen(true)} className="w-full py-5 rounded-[2rem] bg-indigo-50 text-indigo-600 border-2 border-dashed border-indigo-200 text-xs font-black uppercase tracking-widest"><i className="fa-solid fa-copy mr-2"></i> Clone Weekly Roadmap</button>
+            <div className="pt-2 px-1">
+               <button onClick={() => setIsCopyWeekModalOpen(true)} className="w-full py-3 rounded-xl bg-indigo-50 text-indigo-600 border border-dashed border-indigo-200 text-[10px] font-black uppercase tracking-widest"><i className="fa-solid fa-copy mr-1"></i> Clone Weekly Roadmap</button>
             </div>
           )}
         </div>
       );
     }
     return (
-      <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden flex-1 flex flex-col min-h-0 animate-fadeIn">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden flex-1 flex flex-col min-h-0 animate-fadeIn">
         <div className="overflow-auto flex-1 relative custom-scrollbar">
           <table className="w-full border-collapse table-fixed min-w-[1200px]">
             <thead>
               <tr className="bg-slate-50">
-                <th className="sticky top-0 left-0 z-50 w-24 p-4 text-[11px] font-black text-slate-800 uppercase tracking-widest text-center border-r border-b border-slate-200 bg-slate-50 shadow-[2px_0_0_0_#e2e8f0]">TIME</th>
+                <th className="sticky top-0 left-0 z-50 w-16 p-2 text-[9px] font-black text-slate-800 uppercase tracking-widest text-center border-r border-b border-slate-200 bg-slate-50 shadow-[2px_0_0_0_#e2e8f0]">TIME</th>
                 {dayConfigs.map(({ day, activeSchools }) => (
-                  <th key={toLocalDateStr(day)} colSpan={Math.max(1, activeSchools.length)} className="sticky top-0 z-40 p-4 border-l border-b border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors group/header" onClick={() => setFocusedDay(day)}>
+                  <th key={toLocalDateStr(day)} colSpan={Math.max(1, activeSchools.length)} className="sticky top-0 z-40 p-2 border-l border-b border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors group/header" onClick={() => setFocusedDay(day)}>
                     <div className="flex flex-col items-center">
-                      <span className="text-[11px] font-black text-indigo-600 uppercase tracking-widest group-hover/header:underline">{day.toLocaleDateString('en-US', { weekday: 'long' })}</span>
-                      <span className="text-sm font-bold text-slate-400">{day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                      <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest group-hover/header:underline">{day.toLocaleDateString('en-US', { weekday: 'long' })}</span>
+                      <span className="text-xs font-bold text-slate-400">{day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                     </div>
                   </th>
                 ))}
@@ -492,28 +492,28 @@ const App: React.FC = () => {
             <tbody>
               {timeSlots.map(time => (
                 <tr key={time} className="group border-b border-slate-100 last:border-0">
-                  <td className="sticky left-0 z-30 p-4 text-xs font-black text-slate-400 text-center bg-slate-50/50 backdrop-blur-sm font-mono border-r border-slate-200 shadow-[2px_0_0_0_#e2e8f0]">{time}</td>
+                  <td className="sticky left-0 z-30 p-2 text-[10px] font-black text-slate-400 text-center bg-slate-50/50 backdrop-blur-sm font-mono border-r border-slate-200 shadow-[2px_0_0_0_#e2e8f0]">{time}</td>
                   {dayConfigs.map(({ day, activeSchools }) => {
                     const dateStr = toLocalDateStr(day);
                     const hour = parseInt(time.split(':')[0]);
                     if (activeSchools.length === 0) {
-                      return <td key={`${dateStr}-empty`} className="p-1 border-l border-slate-100 relative align-top hover:bg-slate-50/40 group/cell cursor-pointer" onClick={() => openEditModal(undefined, { date: dateStr, startTime: time })}><div className="min-h-[60px] flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity"><span className="text-[10px] font-black text-slate-300">+ ADD</span></div></td>;
+                      return <td key={`${dateStr}-empty`} className="p-0.5 border-l border-slate-100 relative align-top hover:bg-slate-50/40 group/cell cursor-pointer" onClick={() => openEditModal(undefined, { date: dateStr, startTime: time })}><div className="min-h-[45px] flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity"><span className="text-[9px] font-black text-slate-300">+ ADD</span></div></td>;
                     }
                     return activeSchools.map(school => {
                       const cellLessons = lessons.filter(l => l.date === dateStr && parseInt(l.startTime.split(':')[0]) === hour && l.schoolId === school.id);
                       return (
-                        <td key={`${dateStr}-${school.id}`} className="p-1.5 border-l border-slate-100 relative align-top hover:bg-slate-50/40 group/cell transition-colors cursor-pointer" onClick={() => openEditModal(undefined, { date: dateStr, startTime: time, schoolId: school.id })}>
-                          <div className="flex flex-col gap-1.5 h-full min-h-[60px]">
+                        <td key={`${dateStr}-${school.id}`} className="p-1 border-l border-slate-100 relative align-top hover:bg-slate-50/40 group/cell transition-colors cursor-pointer" onClick={() => openEditModal(undefined, { date: dateStr, startTime: time, schoolId: school.id })}>
+                          <div className="flex flex-col gap-1 h-full min-h-[45px]">
                             {cellLessons.map(l => {
                               const t = teachers.find(teacher => teacher.id === l.teacherId);
                               return (
-                                <div key={l.id} onClick={(e) => { e.stopPropagation(); openEditModal(l); }} className="p-2.5 rounded-xl border-l-4 shadow-sm transition-all hover:scale-[1.02] active:scale-95 group/card" style={{ backgroundColor: `${t?.color || '#6366f1'}15`, borderLeftColor: t?.color || '#cbd5e1' }}>
-                                  <div className="flex justify-between items-start mb-1"><p className="text-[10px] font-black leading-tight text-slate-800 truncate" title={t ? `${t.firstName} ${t.lastName}` : 'TBA'}>{t ? t.lastName : 'TBA'}</p></div>
-                                  <div className="flex flex-wrap items-center justify-between mt-1 gap-x-2"><p className="text-[9px] font-black text-slate-400 whitespace-nowrap">{l.startTime} – {l.endTime}</p><p className="text-[8px] font-bold text-slate-400">R{l.room}</p></div>
+                                <div key={l.id} onClick={(e) => { e.stopPropagation(); openEditModal(l); }} className="p-1.5 rounded-lg border-l-3 shadow-sm transition-all hover:scale-[1.02] active:scale-95 group/card" style={{ backgroundColor: `${t?.color || '#6366f1'}15`, borderLeftColor: t?.color || '#cbd5e1' }}>
+                                  <div className="flex justify-between items-start"><p className="text-[9px] font-black leading-tight text-slate-800 truncate" title={t ? `${t.firstName} ${t.lastName}` : 'TBA'}>{t ? t.lastName : 'TBA'}</p></div>
+                                  <div className="flex flex-wrap items-center justify-between gap-x-1"><p className="text-[8px] font-black text-slate-400 whitespace-nowrap">{l.startTime} – {l.endTime}</p><p className="text-[7px] font-bold text-slate-400">R{l.room}</p></div>
                                 </div>
                               );
                             })}
-                            {isAdmin && <div className="opacity-0 group-hover/cell:opacity-100 flex items-center justify-center p-1 border-2 border-dashed border-slate-200 rounded-lg text-slate-300 text-[8px] font-black hover:border-indigo-300 hover:text-indigo-400 transition-all"><i className="fa-solid fa-plus"></i></div>}
+                            {isAdmin && <div className="opacity-0 group-hover/cell:opacity-100 flex items-center justify-center p-1 border border-dashed border-slate-200 rounded-lg text-slate-300 text-[7px] font-black transition-all hover:border-indigo-300 hover:text-indigo-400"><i className="fa-solid fa-plus"></i></div>}
                           </div>
                         </td>
                       );
