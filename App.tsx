@@ -55,6 +55,7 @@ const App: React.FC = () => {
   const [editingLesson, setEditingLesson] = useState<Partial<Lesson> | null>(null);
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  const [columnScale, setColumnScale] = useState<number>(1);
   const [userRole, setUserRole] = useState<{ isAdmin: boolean; role: string; teacherId?: string; userId?: string } | null>(null);
   const [editingUser, setEditingUser] = useState<Partial<AppUser> | null>(null);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
@@ -402,7 +403,8 @@ const App: React.FC = () => {
     return (
       <div className="bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden flex-1 flex flex-col min-h-0 animate-fadeIn">
         <div className="overflow-auto flex-1 relative custom-scrollbar">
-          <table className="w-full border-collapse table-fixed min-w-[800px]">
+          {/* <table className="w-full border-collapse table-fixed min-w-[800px]"> */}
+          <table className="w-full border-collapse table-fixed" style={{ minWidth: `${Math.round(800 * columnScale)}px` }}>
             <thead>
               <tr className="bg-slate-50">
                 <th className="sticky top-0 left-0 z-50 w-16 p-2 text-[9px] font-black text-slate-800 uppercase tracking-widest text-center border-r border-b border-slate-200 bg-slate-50 shadow-[2px_0_0_0_#e2e8f0]">TIME</th>
@@ -475,7 +477,8 @@ const App: React.FC = () => {
     return (
       <div className="bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden flex-1 flex flex-col min-h-0 animate-fadeIn">
         <div className="overflow-auto flex-1 relative custom-scrollbar">
-          <table className="w-full border-collapse table-fixed min-w-[1200px]">
+          {/* <table className="w-full border-collapse table-fixed min-w-[1200px]"> */}
+          <table className="w-full border-collapse table-fixed" style={{ minWidth: `${Math.round(1200 * columnScale)}px` }}>
             <thead>
               {/* <tr className="bg-slate-50">
                 <th className="sticky top-0 left-0 z-50 w-16 p-2 text-[9px] font-black text-slate-800 uppercase tracking-widest text-center border-r border-b border-slate-200 bg-slate-50 shadow-[2px_0_0_0_#e2e8f0]">TIME</th>
@@ -608,9 +611,32 @@ const App: React.FC = () => {
                   <button onClick={() => { setCurrentWeekOffset(prev => prev + 1); setFocusedDay(null); }} className="w-10 h-10 flex items-center justify-center hover:bg-slate-50 rounded-xl transition-all"><i className="fa-solid fa-chevron-right text-slate-400"></i></button>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              {/* <div className="flex items-center gap-2">
                 {focusedDay && <button onClick={() => { setFocusedDay(null); setSelectedSchoolId('all'); setSelectedTeacherId('all'); }} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[10px] font-black hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-100"><i className="fa-solid fa-arrow-left"></i> BACK TO WEEK</button>}
                 {!focusedDay && isAdmin && !isMobile && <button onClick={() => setIsCopyWeekModalOpen(true)} className="bg-white border-2 border-slate-200 px-4 py-2 rounded-xl text-[10px] font-black hover:border-indigo-500 hover:text-indigo-600 transition-all flex items-center gap-2"><i className="fa-solid fa-copy"></i> CLONE WEEK</button>}
+              </div> */}
+              <div className="flex items-center gap-3">
+                {focusedDay && <button onClick={() => { setFocusedDay(null); setSelectedSchoolId('all'); setSelectedTeacherId('all'); }} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[10px] font-black hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-100"><i className="fa-solid fa-arrow-left"></i> BACK TO WEEK</button>}
+                {!focusedDay && isAdmin && !isMobile && <button onClick={() => setIsCopyWeekModalOpen(true)} className="bg-white border-2 border-slate-200 px-4 py-2 rounded-xl text-[10px] font-black hover:border-indigo-500 hover:text-indigo-600 transition-all flex items-center gap-2"><i className="fa-solid fa-copy"></i> CLONE WEEK</button>}
+                {!isMobile && (
+                  <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-2xl shadow-sm border border-slate-100">
+                    <i className="fa-solid fa-text-width text-slate-400 text-xs"></i>
+                    <input
+                      type="range"
+                      min={50}
+                      max={200}
+                      step={10}
+                      value={columnScale * 100}
+                      onChange={e => setColumnScale(Number(e.target.value) / 100)}
+                      className="w-24 accent-indigo-600 cursor-pointer"
+                      title={`Column width: ${Math.round(columnScale * 100)}%`}
+                    />
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest w-8 text-right">{Math.round(columnScale * 100)}%</span>
+                    {columnScale !== 1 && (
+                      <button onClick={() => setColumnScale(1)} className="text-[8px] font-black text-indigo-500 hover:text-indigo-700 ml-1">↺</button>
+                    )}
+                  </div>
+                )}
               </div>
             </header>
             <div className="flex-1 min-h-0 flex flex-col">
