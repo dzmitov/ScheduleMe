@@ -504,17 +504,17 @@ const App: React.FC = () => {
               </tr>
 
               {/* Строка 2: названия школ под каждым днём */}
-              <tr className="bg-slate-50/80">
+              <tr className="bg-slate-50/80 h-[48px]">
                 {dayConfigs.map(({ day, activeSchools }) => {
                   if (activeSchools.length === 0) {
                     return (
-                      <th key={`schools-${toLocalDateStr(day)}`} className="sticky top-[56px] z-39 p-1 border-l border-b border-slate-200 bg-slate-50/80">
+                      <th key={`schools-${toLocalDateStr(day)}`} className="sticky top-[48px] z-39 p-1 border-l border-b border-slate-200 bg-slate-50/80">
                         <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest">—</span>
                       </th>
                     );
                   }
                   return activeSchools.map(school => (
-                    <th key={`school-${toLocalDateStr(day)}-${school.id}`} className="sticky top-[56px] z-39 p-1 border-l border-b border-slate-200 bg-indigo-50/60">
+                    <th key={`school-${toLocalDateStr(day)}-${school.id}`} className="sticky top-[48px] z-39 p-1 border-l border-b border-slate-200 bg-indigo-50/60">
                       <span className="text-[8px] font-black text-indigo-500 uppercase tracking-widest truncate block text-center" title={school.name}>
                         {school.name}
                       </span>
