@@ -65,6 +65,7 @@ function rowToSchool(row: Record<string, unknown>): School {
   return {
     id: String(row.id ?? ''),
     name: String(row.name ?? ''),
+    address: String(row.address ?? ''),
   };
 }
 

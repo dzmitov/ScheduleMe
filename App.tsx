@@ -667,6 +667,12 @@ const App: React.FC = () => {
                     <div key={s.id} className="p-4 lg:p-5 flex items-center gap-4 hover:bg-slate-50/50 transition-colors">
                       <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black shrink-0">U</div>
                       <input value={s.name} onChange={e => setSchools(prev => prev.map(item => item.id === s.id ? { ...item, name: e.target.value } : item))} onBlur={() => handleSchoolBlur(s.id)} className="flex-1 bg-slate-50 border-none rounded-lg px-4 py-3 text-sm font-bold text-slate-700 outline-none" placeholder="Branch Name" />
+                      <input value={s.address ?? ''} 
+                        onChange={e => setSchools(prev => prev.map(item => item.id === s.id ? { ...item, address: e.target.value } : item))} 
+                        onBlur={() => handleSchoolBlur(s.id)}  // тот же blur = тот же save
+                        className="flex-1 bg-slate-50 border-none rounded-lg px-4 py-2 text-xs text-slate-500 outline-none" 
+                        placeholder="Address (optional)" 
+      />                      
                       <button onClick={() => handleDeleteSchool(s.id)} className="text-slate-300 hover:text-rose-500 transition-colors shrink-0"><i className="fa-solid fa-trash-can"></i></button>
                     </div>
                   ))}

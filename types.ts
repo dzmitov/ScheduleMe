@@ -32,6 +32,7 @@ export interface Teacher {
 export interface School {
   id: string;
   name: string;
+  address?: string;
 }
 
 export interface Lesson {

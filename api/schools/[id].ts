@@ -11,6 +11,7 @@ function normalizeSchool(body: Record<string, unknown>, id: string) {
   return {
     id,
     name: String(body.name ?? ''),
+    address: String(body.address ?? ''),
   };
 }
 
@@ -31,7 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'PATCH') {
       const body = (req.body ?? {}) as Record<string, unknown>;
       const school = normalizeSchool(body, id);
-      await sql`UPDATE schools SET name = ${school.name} WHERE id = ${id}`;
+      await sql`UPDATE schools SET name = ${school.name}, address = ${school.address} WHERE id = ${id}`;
       return res.status(200).json({ school: { ...school, id } });
     }
 
