@@ -228,7 +228,7 @@ const App: React.FC = () => {
     const dayStrings = weekDays.map((d) => toLocalDateStr(d));
     const currentWeekLessons = lessons.filter((l) => dayStrings.includes(l.date));
     if (currentWeekLessons.length === 0) {
-      alert('No sessions found to duplicate.');
+      alert('No Classes found to duplicate.');
       return;
     }
     const newLessons = currentWeekLessons.map((l) => {
@@ -461,7 +461,7 @@ const App: React.FC = () => {
             <button key={day.toISOString()} onClick={() => setFocusedDay(day)} className="w-full bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between group active:scale-[0.98] transition-all">
               <div className="flex flex-col items-start"><span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">{day.toLocaleDateString('en-US', { weekday: 'long' })}</span><span className="text-base font-bold text-slate-800">{day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span></div>
               <div className="flex items-center gap-2">
-                <div className="text-right"><p className="text-lg font-black text-slate-900 leading-none">{lessonCount}</p><p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Sessions</p></div>
+                <div className="text-right"><p className="text-lg font-black text-slate-900 leading-none">{lessonCount}</p><p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Classes</p></div>
                 <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors"><i className="fa-solid fa-chevron-right"></i></div>
               </div>
             </button>
@@ -587,8 +587,8 @@ const App: React.FC = () => {
         {view === 'dashboard' && (
           <div className="space-y-8 lg:space-y-12 animate-fadeIn max-w-7xl mx-auto w-full overflow-y-auto custom-scrollbar pr-2">
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div><h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Overview</h1><p className="text-slate-500 mt-2 font-medium flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>Session active for <span className="text-indigo-600 font-bold">{user.fullName || user.firstName || 'User'}</span></p></div>
-              {isAdmin && <button onClick={() => openEditModal()} className="bg-indigo-600 text-white px-8 py-4 rounded-[1.5rem] font-black shadow-2xl shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-1 transition-all active:translate-y-0 text-sm lg:text-base">+ New Session</button>}
+              <div><h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Overview</h1><p className="text-slate-500 mt-2 font-medium flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>Class active for <span className="text-indigo-600 font-bold">{user.fullName || user.firstName || 'User'}</span></p></div>
+              {isAdmin && <button onClick={() => openEditModal()} className="bg-indigo-600 text-white px-8 py-4 rounded-[1.5rem] font-black shadow-2xl shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-1 transition-all active:translate-y-0 text-sm lg:text-base">+ New Class</button>}
             </header>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
               <div className="bg-white p-6 lg:p-8 rounded-[2rem] lg:rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-center"><p className="text-slate-400 text-[11px] font-black uppercase tracking-widest mb-1">Volume</p><div className="flex items-baseline gap-2"><p className="text-5xl lg:text-6xl font-black text-indigo-600">{stats.total}</p><span className="text-slate-300 font-bold uppercase text-[10px] tracking-widest">total units</span></div></div>
@@ -745,7 +745,7 @@ const App: React.FC = () => {
         )}
         {view === 'admin-manage' && (
           <div className="space-y-8 lg:space-y-12 animate-fadeIn max-w-7xl mx-auto w-full overflow-y-auto custom-scrollbar pr-2 pb-20">
-            <header><h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Audit Feed</h1><p className="text-slate-500 font-medium">History of all school sessions.</p></header>
+            <header><h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Audit Feed</h1><p className="text-slate-500 font-medium">History of all school classes.</p></header>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">{[...lessons].sort((a, b) => b.date.localeCompare(a.date) || b.startTime.localeCompare(a.startTime)).map(l => <LessonCard key={l.id} lesson={l} teachers={teachers} schools={schools} isAdmin={isAdmin} compact={isMobile} onEdit={openEditModal} />)}</div>
           </div>
         )}
@@ -768,7 +768,7 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-[210] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn">
           <div className="bg-white w-full max-w-2xl rounded-[3rem] lg:rounded-[3.5rem] shadow-2xl p-6 lg:p-10 relative overflow-hidden max-h-[95vh] overflow-y-auto custom-scrollbar">
             <div className="flex justify-between items-center mb-8 lg:mb-10">
-              <h2 className="text-2xl lg:text-3xl font-black text-slate-800 tracking-tight">{editingLesson.id && lessons.some(l => l.id === editingLesson.id) ? 'Edit Record' : 'New Session'}</h2>
+              <h2 className="text-2xl lg:text-3xl font-black text-slate-800 tracking-tight">{editingLesson.id && lessons.some(l => l.id === editingLesson.id) ? 'Edit Record' : 'New Class'}</h2>
               <button onClick={() => { setIsModalOpen(false); setEditingLesson(null); }} className="w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center transition-all"><i className="fa-solid fa-xmark text-slate-400 text-xl"></i></button>
             </div>
 
