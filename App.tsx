@@ -429,7 +429,7 @@ const App: React.FC = () => {
                             const t = teachers.find(teacher => teacher.id === l.teacherId);
                             return (
                               <div key={l.id} onClick={(e) => { e.stopPropagation(); openEditModal(l); }} className="p-1.5 rounded-lg border-l-3 shadow-sm transition-all hover:scale-[1.02] active:scale-95 group/card" style={{ backgroundColor: `${t?.color || '#6366f1'}15`, borderLeftColor: t?.color || '#cbd5e1' }}>
-                                <div className="flex justify-between items-start"><p className="text-[9px] font-black leading-tight text-slate-800 truncate" title={t ? `${t.firstName} ${t.lastName}` : 'TBA'}>{t ? t.lastName : 'TBA'}</p>{l.grade && <p className="text-[7px] font-black text-slate-500 shrink-0 ml-1">{l.grade}</p>}</div>
+                                <div className="flex justify-between items-start"><p className="text-[9px] font-black leading-tight text-slate-800 truncate" title={t ? `${t.firstName} ${t.lastName}` : 'TBA'}>{t ? t.lastName : 'TBA'}</p>{l.grade && <p className="text-[9px] font-black text-slate-500 shrink-0 ml-1">{l.grade}</p>}</div>
                                 <div className="flex flex-wrap items-center justify-between gap-x-1"><p className="text-[8px] font-black text-slate-400 whitespace-nowrap">{l.startTime} – {l.endTime}</p><p className="text-[7px] font-bold text-slate-400">{l.room}</p></div>
                               </div>
                             );
@@ -542,7 +542,7 @@ const App: React.FC = () => {
                               const t = teachers.find(teacher => teacher.id === l.teacherId);
                               return (
                                 <div key={l.id} onClick={(e) => { e.stopPropagation(); openEditModal(l); }} className="p-1.5 rounded-lg border-l-3 shadow-sm transition-all hover:scale-[1.02] active:scale-95 group/card" style={{ backgroundColor: `${t?.color || '#6366f1'}15`, borderLeftColor: t?.color || '#cbd5e1' }}>
-                                  <div className="flex justify-between items-start"><p className="text-[9px] font-black leading-tight text-slate-800 truncate" title={t ? `${t.firstName} ${t.lastName}` : 'TBA'}>{t ? t.lastName : 'TBA'}</p>{l.grade && <p className="text-[7px] font-black text-slate-500 shrink-0 ml-1">{l.grade}</p>}</div>
+                                  <div className="flex justify-between items-start"><p className="text-[9px] font-black leading-tight text-slate-800 truncate" title={t ? `${t.firstName} ${t.lastName}` : 'TBA'}>{t ? t.lastName : 'TBA'}</p>{l.grade && <p className="text-[9px] font-black text-slate-500 shrink-0 ml-1">{l.grade}</p>}</div>
                                   <div className="flex flex-wrap items-center justify-between gap-x-1"><p className="text-[8px] font-black text-slate-400 whitespace-nowrap">{l.startTime} – {l.endTime}</p><p className="text-[7px] font-bold text-slate-400">{l.room}</p></div>
                                 </div>
                               );
