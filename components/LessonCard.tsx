@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Lesson, Teacher, School } from '../types';
 
@@ -40,7 +39,7 @@ const LessonCard: React.FC<LessonCardProps> = ({ lesson, teachers, schools, isAd
             </span>
           </div>
           <p className="text-[7px] font-medium text-slate-400 truncate">
-            {lesson.grade} • R{lesson.room}
+            {lesson.grade} • {lesson.room}
           </p>
         </div>
         <div className="shrink-0 text-slate-300">
@@ -67,13 +66,18 @@ const LessonCard: React.FC<LessonCardProps> = ({ lesson, teachers, schools, isAd
       </div>
 
       <div className="space-y-0.5">
-        <div className="flex items-center gap-1.5 text-xs text-slate-600">
-          <i className="fa-solid fa-user-tie text-indigo-400 w-3.5"></i>
-          <span className="font-bold" style={{ color: teacherColor }}>{teacherName}</span>
+        <div className="flex items-center justify-between gap-1.5 text-xs text-slate-600">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <i className="fa-solid fa-user-tie text-indigo-400 w-3.5 shrink-0"></i>
+            <span className="font-bold truncate" style={{ color: teacherColor }}>{teacherName}</span>
+          </div>
+          {lesson.grade && (
+            <span className="font-black text-slate-500 text-[10px] shrink-0">{lesson.grade}</span>
+          )}
         </div>
         <div className="flex items-center gap-1.5 text-xs text-slate-600">
           <i className="fa-solid fa-users text-indigo-400 w-3.5"></i>
-          <span className="font-medium">{lesson.grade || 'No Class'} • <span className="font-black text-slate-400">R{lesson.room}</span></span>
+          <span className="font-medium"><span className="font-black text-slate-400">{lesson.room}</span></span>
         </div>
       </div>
 
