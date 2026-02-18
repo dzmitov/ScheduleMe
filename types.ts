@@ -33,6 +33,7 @@ export interface School {
   id: string;
   name: string;
   address?: string;
+  sortOrder?: number;
 }
 
 export interface Lesson {

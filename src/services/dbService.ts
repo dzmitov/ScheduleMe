@@ -66,6 +66,7 @@ function rowToSchool(row: Record<string, unknown>): School {
     id: String(row.id ?? ''),
     name: String(row.name ?? ''),
     address: String(row.address ?? ''),
+    sortOrder: typeof row.sortOrder === 'number' ? row.sortOrder : (typeof row.sort_order === 'number' ? row.sort_order : 0),
   };
 }
 

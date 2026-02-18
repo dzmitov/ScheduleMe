@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import Sidebar from './components/Sidebar';
 import LessonCard from './components/LessonCard';
-import TeacherHoursReport from './components/TeacherHoursReport'; 
+import TeacherHoursReport from './components/TeacherHoursReport';
 import { Lesson, LessonStatus, ViewType, Teacher, School, AppUser } from './types';
 import {
   fetchLessons,
@@ -295,6 +295,7 @@ const App: React.FC = () => {
     const newSchool: School = {
       id: Math.random().toString(36).substr(2, 9),
       name: 'New Unit',
+      sortOrder: 0,
     };
     try {
       const saved = await addSchool(newSchool);
@@ -400,7 +401,8 @@ const App: React.FC = () => {
         </div>
       );
     }
-    const filteredSchools = selectedSchoolId === 'all' ? schools : schools.filter(s => s.id === selectedSchoolId);
+    const filteredSchools = (selectedSchoolId === 'all' ? schools : schools.filter(s => s.id === selectedSchoolId))
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));  // ← ДОБАВЛЕНА СОРТИРОВКА
     return (
       <div className="bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden flex-1 flex flex-col min-h-0 animate-fadeIn">
         <div className="overflow-auto flex-1 relative custom-scrollbar">
@@ -449,11 +451,26 @@ const App: React.FC = () => {
     );
   };
 
+  // const renderWeeklyTimetable = () => {
+  //   const dayConfigs = weekDays.map(day => {
+  //     const dayDateStr = toLocalDateStr(day);
+  //     const dayLessons = lessons.filter(l => l.date === dayDateStr);
+  //     return { day, lessonCount: dayLessons.length, activeSchools: dayLessons.map(l => l.schoolId).filter((v, i, a) => a.indexOf(v) === i).map(id => schools.find(s => s.id === id)).filter(Boolean) as School[] };
+  //   });
   const renderWeeklyTimetable = () => {
     const dayConfigs = weekDays.map(day => {
       const dayDateStr = toLocalDateStr(day);
       const dayLessons = lessons.filter(l => l.date === dayDateStr);
-      return { day, lessonCount: dayLessons.length, activeSchools: dayLessons.map(l => l.schoolId).filter((v, i, a) => a.indexOf(v) === i).map(id => schools.find(s => s.id === id)).filter(Boolean) as School[] };
+      return {
+        day,
+        lessonCount: dayLessons.length,
+        activeSchools: dayLessons
+          .map(l => l.schoolId)
+          .filter((v, i, a) => a.indexOf(v) === i)
+          .map(id => schools.find(s => s.id === id))
+          .filter(Boolean)
+          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)) as School[]  // ← ДОБАВЛЕНА СОРТИРОВКА
+      };
     });
     if (isMobile) {
       return (
@@ -630,61 +647,61 @@ const App: React.FC = () => {
                 <div className="flex items-center gap-2">
                   {/* Кнопка CLONE WEEK теперь здесь, рядом с навигацией */}
                   {!focusedDay && isAdmin && !isMobile && (
-                  <button 
-                    onClick={() => setIsCopyWeekModalOpen(true)} 
-                    className="bg-white border-2 border-slate-200 px-3 py-2 rounded-xl text-[9px] font-black hover:border-indigo-500 hover:text-indigo-600 transition-all flex items-center gap-1.5"
-                  >
-                    <i className="fa-solid fa-copy text-xs"></i> 
-                    <span>CLONE WEEK</span>
-                  </button>
-                )}
-      
-                {/* Навигационные стрелки и Current Week */}
-                <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl shadow-sm border border-slate-100">
-                  <button 
-                    onClick={() => { setCurrentWeekOffset(prev => prev - 1); setFocusedDay(null); }} 
-                    className="w-8 h-8 flex items-center justify-center hover:bg-slate-50 rounded-lg transition-all"
-                  >
-                  <i className="fa-solid fa-chevron-left text-slate-400 text-sm"></i>
-                  </button>
-                  <button 
-                    onClick={() => { setCurrentWeekOffset(0); setFocusedDay(null); }} 
-                    className="px-2 py-1 text-[9px] font-black text-indigo-600 hover:bg-indigo-50 rounded-lg uppercase tracking-widest hidden sm:flex sm:flex-col sm:items-center leading-tight"
-                  >
-                    <span>Current</span>
-                    <span>Week</span>
-                  </button>
-                  <button 
-                    onClick={() => { setCurrentWeekOffset(prev => prev + 1); setFocusedDay(null); }} 
-                    className="w-8 h-8 flex items-center justify-center hover:bg-slate-50 rounded-lg transition-all"
-                  >
-                    <i className="fa-solid fa-chevron-right text-slate-400 text-sm"></i>
-                  </button>
+                    <button
+                      onClick={() => setIsCopyWeekModalOpen(true)}
+                      className="bg-white border-2 border-slate-200 px-3 py-2 rounded-xl text-[9px] font-black hover:border-indigo-500 hover:text-indigo-600 transition-all flex items-center gap-1.5"
+                    >
+                      <i className="fa-solid fa-copy text-xs"></i>
+                      <span>CLONE WEEK</span>
+                    </button>
+                  )}
+
+                  {/* Навигационные стрелки и Current Week */}
+                  <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl shadow-sm border border-slate-100">
+                    <button
+                      onClick={() => { setCurrentWeekOffset(prev => prev - 1); setFocusedDay(null); }}
+                      className="w-8 h-8 flex items-center justify-center hover:bg-slate-50 rounded-lg transition-all"
+                    >
+                      <i className="fa-solid fa-chevron-left text-slate-400 text-sm"></i>
+                    </button>
+                    <button
+                      onClick={() => { setCurrentWeekOffset(0); setFocusedDay(null); }}
+                      className="px-2 py-1 text-[9px] font-black text-indigo-600 hover:bg-indigo-50 rounded-lg uppercase tracking-widest hidden sm:flex sm:flex-col sm:items-center leading-tight"
+                    >
+                      <span>Current</span>
+                      <span>Week</span>
+                    </button>
+                    <button
+                      onClick={() => { setCurrentWeekOffset(prev => prev + 1); setFocusedDay(null); }}
+                      className="w-8 h-8 flex items-center justify-center hover:bg-slate-50 rounded-lg transition-all"
+                    >
+                      <i className="fa-solid fa-chevron-right text-slate-400 text-sm"></i>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-  
-            {/* Блок для кнопки BACK TO WEEK - только когда focusedDay активен */}
-            {focusedDay && (
-              <div className="flex items-center gap-3">
-                <button 
-                  onClick={() => { setFocusedDay(null); setSelectedSchoolId('all'); setSelectedTeacherId('all'); }} 
-                  className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[10px] font-black hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-100"
-                >
-                  <i className="fa-solid fa-arrow-left"></i> BACK TO WEEK
-                </button>
-              </div>
-            )}
-          </header>
+
+              {/* Блок для кнопки BACK TO WEEK - только когда focusedDay активен */}
+              {focusedDay && (
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => { setFocusedDay(null); setSelectedSchoolId('all'); setSelectedTeacherId('all'); }}
+                    className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[10px] font-black hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-100"
+                  >
+                    <i className="fa-solid fa-arrow-left"></i> BACK TO WEEK
+                  </button>
+                </div>
+              )}
+            </header>
             <div className="flex-1 min-h-0 flex flex-col">
               {focusedDay ? renderDailyTimetable(focusedDay) : renderWeeklyTimetable()}
             </div>
           </div>
         )}
         {view === 'reports' && isAdmin && (
-          <TeacherHoursReport 
-            lessons={lessons} 
-            teachers={teachers} 
+          <TeacherHoursReport
+            lessons={lessons}
+            teachers={teachers}
             schools={schools}
           />
         )}
@@ -708,7 +725,7 @@ const App: React.FC = () => {
                 <section className="space-y-6">
                   <div className="flex justify-between items-center px-2"><h2 className="text-xl lg:text-2xl font-black text-slate-800">Branches</h2><button onClick={handleAddSchool} className="text-indigo-600 text-[10px] font-black hover:underline uppercase tracking-widest">+ UNIT</button></div>
                   <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden divide-y divide-slate-50">
-                    {schools.map(s => (
+                    {/* {schools.map(s => (
                       <div key={s.id} className="p-4 lg:p-5 flex items-center gap-4 hover:bg-slate-50/50 transition-colors">
                         <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black shrink-0">U</div>
                         <input value={s.name} onChange={e => setSchools(prev => prev.map(item => item.id === s.id ? { ...item, name: e.target.value } : item))} onBlur={() => handleSchoolBlur(s.id)} className="flex-1 bg-slate-50 border-none rounded-lg px-4 py-3 text-sm font-bold text-slate-700 outline-none" placeholder="Branch Name" />
@@ -720,79 +737,116 @@ const App: React.FC = () => {
       />                      
                         <button onClick={() => handleDeleteSchool(s.id)} className="text-slate-300 hover:text-rose-500 transition-colors shrink-0"><i className="fa-solid fa-trash-can"></i></button>
                       </div>
+                    ))} */}
+                    {schools.map(s => (
+                      <div key={s.id} className="p-4 lg:p-5 flex flex-col gap-3 hover:bg-slate-50/50 transition-colors">
+                        {/* Первая строка: иконка, название, адрес, удаление */}
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black shrink-0">U</div>
+                          <input value={s.name}
+                            onChange={e => setSchools(prev => prev.map(item => item.id === s.id ? { ...item, name: e.target.value } : item))}
+                            onBlur={() => handleSchoolBlur(s.id)}
+                            className="flex-1 bg-slate-50 border-none rounded-lg px-4 py-3 text-sm font-bold text-slate-700 outline-none"
+                            placeholder="Branch Name"
+                          />
+                          <input value={s.address ?? ''}
+                            onChange={e => setSchools(prev => prev.map(item => item.id === s.id ? { ...item, address: e.target.value } : item))}
+                            onBlur={() => handleSchoolBlur(s.id)}
+                            className="flex-1 bg-slate-50 border-none rounded-lg px-4 py-2 text-xs text-slate-500 outline-none"
+                            placeholder="Address (optional)"
+                          />
+                          <button onClick={() => handleDeleteSchool(s.id)} className="text-slate-300 hover:text-rose-500 transition-colors shrink-0">
+                            <i className="fa-solid fa-trash-can"></i>
+                          </button>
+                        </div>
+
+                        {/* Вторая строка: поле сортировки */}
+                        <div className="flex items-center gap-2 pl-14">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sort Order:</label>
+                          <input
+                            type="number"
+                            value={s.sortOrder ?? 0}
+                            onChange={e => setSchools(prev => prev.map(item => item.id === s.id ? { ...item, sortOrder: parseInt(e.target.value) || 0 } : item))}
+                            onBlur={() => handleSchoolBlur(s.id)}
+                            className="w-20 bg-slate-50 border-none rounded-lg px-3 py-2 text-sm font-bold text-slate-700 outline-none text-center"
+                            placeholder="0"
+                          />
+                          <span className="text-[10px] text-slate-400 italic">(Lower numbers appear first)</span>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </section>
               </div>
 
-            {/* User Management Section */}
-            <section className="space-y-6 mt-12">
-              <div className="flex justify-between items-center px-2">
-                <h2 className="text-xl lg:text-2xl font-black text-slate-800">User Access</h2>
-                <button
-                  onClick={() => {
-                    setEditingUser({
-                      id: Math.random().toString(36).substring(2, 11),
-                      email: '',
-                      role: 'viewer'
-                    });
-                    setIsUserModalOpen(true);
-                  }}
-                  className="text-indigo-600 text-[10px] font-black hover:underline uppercase tracking-widest"
-                >
-                  + USER
-                </button>
-              </div>
-              <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
-                <div className="p-4 bg-slate-50 border-b border-slate-100">
-                  <div className="grid grid-cols-12 gap-4">
-                    <div className="col-span-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Email</div>
-                    <div className="col-span-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Role</div>
-                    <div className="col-span-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Teacher</div>
-                    <div className="col-span-1 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Actions</div>
-                  </div>
+              {/* User Management Section */}
+              <section className="space-y-6 mt-12">
+                <div className="flex justify-between items-center px-2">
+                  <h2 className="text-xl lg:text-2xl font-black text-slate-800">User Access</h2>
+                  <button
+                    onClick={() => {
+                      setEditingUser({
+                        id: Math.random().toString(36).substring(2, 11),
+                        email: '',
+                        role: 'viewer'
+                      });
+                      setIsUserModalOpen(true);
+                    }}
+                    className="text-indigo-600 text-[10px] font-black hover:underline uppercase tracking-widest"
+                  >
+                    + USER
+                  </button>
                 </div>
-                <div className="divide-y divide-slate-50">
-                  {users.map(user => (
-                    <div key={user.id} className="p-4 hover:bg-slate-50/50 transition-colors">
-                      <div className="grid grid-cols-12 gap-4 items-center">
-                        <div className="col-span-5 font-medium text-slate-700 truncate">{user.email}</div>
-                        <div className="col-span-3">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.role === 'admin'
-                            ? 'bg-indigo-100 text-indigo-800'
-                            : user.role === 'teacher'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-slate-100 text-slate-800'
-                            }`}>
-                            {user.role === 'admin' ? 'Administrator' : user.role === 'teacher' ? 'Teacher' : 'Viewer'}
-                          </span>
-                        </div>
-                        <div className="col-span-3 text-sm text-slate-500 truncate">
-                          {user.teacherName || (user.teacherId ? 'Assigned' : '-')}
-                        </div>
-                        <div className="col-span-1 flex justify-center">
-                          <button
-                            onClick={() => {
-                              setEditingUser(user);
-                              setIsUserModalOpen(true);
-                            }}
-                            className="text-slate-400 hover:text-indigo-600 transition-colors"
-                          >
-                            <i className="fa-solid fa-pen-to-square"></i>
-                          </button>
+                <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+                  <div className="p-4 bg-slate-50 border-b border-slate-100">
+                    <div className="grid grid-cols-12 gap-4">
+                      <div className="col-span-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Email</div>
+                      <div className="col-span-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Role</div>
+                      <div className="col-span-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Teacher</div>
+                      <div className="col-span-1 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Actions</div>
+                    </div>
+                  </div>
+                  <div className="divide-y divide-slate-50">
+                    {users.map(user => (
+                      <div key={user.id} className="p-4 hover:bg-slate-50/50 transition-colors">
+                        <div className="grid grid-cols-12 gap-4 items-center">
+                          <div className="col-span-5 font-medium text-slate-700 truncate">{user.email}</div>
+                          <div className="col-span-3">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.role === 'admin'
+                              ? 'bg-indigo-100 text-indigo-800'
+                              : user.role === 'teacher'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-slate-100 text-slate-800'
+                              }`}>
+                              {user.role === 'admin' ? 'Administrator' : user.role === 'teacher' ? 'Teacher' : 'Viewer'}
+                            </span>
+                          </div>
+                          <div className="col-span-3 text-sm text-slate-500 truncate">
+                            {user.teacherName || (user.teacherId ? 'Assigned' : '-')}
+                          </div>
+                          <div className="col-span-1 flex justify-center">
+                            <button
+                              onClick={() => {
+                                setEditingUser(user);
+                                setIsUserModalOpen(true);
+                              }}
+                              className="text-slate-400 hover:text-indigo-600 transition-colors"
+                            >
+                              <i className="fa-solid fa-pen-to-square"></i>
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                  {users.length === 0 && (
-                    <div className="p-8 text-center text-slate-400">
-                      <p>No users found. Add your first user to get started.</p>
-                    </div>
-                  )}
+                    ))}
+                    {users.length === 0 && (
+                      <div className="p-8 text-center text-slate-400">
+                        <p>No users found. Add your first user to get started.</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </section>
-          </div>
+              </section>
+            </div>
           </div>
         )}
         {view === 'admin-manage' && (
