@@ -41,7 +41,7 @@ const App: React.FC = () => {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [users, setUsers] = useState<AppUser[]>([]);
   const [openSettingsSections, setOpenSettingsSections] = useState<Record<string, boolean>>({
-    faculty: true,
+    faculty: false,
     schools: false,
     users: false,
   });
