@@ -603,12 +603,12 @@ const App: React.FC = () => {
         )}
         {view === 'schedule' && (
           <div className="animate-fadeIn w-full h-full flex flex-col min-h-0">
-            <header className="flex flex-col gap-4 max-w-7xl mx-auto w-full mb-6 lg:mb-8 shrink-0">
+            <header className="flex flex-col gap-2 max-w-7xl mx-auto w-full mb-3 lg:mb-4 shrink-0">
               <div className="flex items-start justify-between">
-                <div><h1 className="text-2xl lg:text-4xl font-black text-slate-900 tracking-tight">{focusedDay ? focusedDay.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Weekly Loop'}</h1><p className="text-xs lg:text-sm text-slate-500 font-medium truncate max-w-[200px] lg:max-w-none">{focusedDay ? 'Detailed view for the selected day.' : 'Consolidated schedule for all units.'}</p></div>
+                <div><h1 className="text-lg lg:text-xl font-black text-slate-900 tracking-tight">{focusedDay ? focusedDay.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Weekly Loop'}</h1></div>
                 <div className="flex items-center gap-2 lg:gap-4 bg-white p-2 rounded-2xl shadow-sm border border-slate-100">
                   <button onClick={() => { setCurrentWeekOffset(prev => prev - 1); setFocusedDay(null); }} className="w-10 h-10 flex items-center justify-center hover:bg-slate-50 rounded-xl transition-all"><i className="fa-solid fa-chevron-left text-slate-400"></i></button>
-                  <button onClick={() => { setCurrentWeekOffset(0); setFocusedDay(null); }} className="px-3 lg:px-6 py-2 text-[10px] font-black text-indigo-600 hover:bg-indigo-50 rounded-lg uppercase tracking-widest hidden sm:block">Today</button>
+                  <button onClick={() => { setCurrentWeekOffset(0); setFocusedDay(null); }} className="px-3 lg:px-6 py-2 text-[10px] font-black text-indigo-600 hover:bg-indigo-50 rounded-lg uppercase tracking-widest hidden sm:block"><span>Current</span><span>Week</span></button>
                   <button onClick={() => { setCurrentWeekOffset(prev => prev + 1); setFocusedDay(null); }} className="w-10 h-10 flex items-center justify-center hover:bg-slate-50 rounded-xl transition-all"><i className="fa-solid fa-chevron-right text-slate-400"></i></button>
                 </div>
               </div>
