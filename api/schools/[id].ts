@@ -12,6 +12,7 @@ function normalizeSchool(body: Record<string, unknown>, id: string) {
     id,
     name: String(body.name ?? ''),
     address: String(body.address ?? ''),
+    sortOrder: typeof body.sortOrder === 'number' ? body.sortOrder : 0,
   };
 }
 
@@ -32,7 +33,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'PATCH') {
       const body = (req.body ?? {}) as Record<string, unknown>;
       const school = normalizeSchool(body, id);
-      await sql`UPDATE schools SET name = ${school.name}, address = ${school.address} WHERE id = ${id}`;
+      await sql`UPDATE schools 
+        SET name = ${school.name}, 
+            address = ${school.address}, 
+            sort_order = ${school.sortOrder} 
+        WHERE id = ${id}`;
       return res.status(200).json({ school: { ...school, id } });
     }
 
