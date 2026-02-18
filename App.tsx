@@ -603,43 +603,79 @@ const App: React.FC = () => {
         )}
         {view === 'schedule' && (
           <div className="animate-fadeIn w-full h-full flex flex-col min-h-0">
-            <header className="flex flex-col gap-2 max-w-7xl mx-auto w-full mb-3 lg:mb-4 shrink-0">
+            {/* <header className="flex flex-col gap-2 max-w-7xl mx-auto w-full mb-3 lg:mb-4 shrink-0">
               <div className="flex items-start justify-between">
                 <div><h1 className="text-lg lg:text-xl font-black text-slate-900 tracking-tight">{focusedDay ? focusedDay.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Weekly Loop'}</h1></div>
                 <div className="flex items-center gap-2 lg:gap-4 bg-white p-2 rounded-2xl shadow-sm border border-slate-100">
                   <button onClick={() => { setCurrentWeekOffset(prev => prev - 1); setFocusedDay(null); }} className="w-10 h-10 flex items-center justify-center hover:bg-slate-50 rounded-xl transition-all"><i className="fa-solid fa-chevron-left text-slate-400"></i></button>
-                  <button onClick={() => { setCurrentWeekOffset(0); setFocusedDay(null); }} className="px-3 lg:px-6 py-2 text-[10px] font-black text-indigo-600 hover:bg-indigo-50 rounded-lg uppercase tracking-widest hidden sm:block"><span>Current</span><span>Week</span></button>
+                  <button onClick={() => { setCurrentWeekOffset(0); setFocusedDay(null); }} className="px-3 lg:px-6 py-2 text-[10px] font-black text-indigo-600 hover:bg-indigo-50 rounded-lg uppercase tracking-widest hidden sm:block">
+                    <span>Current</span>
+                    <span>Week</span>
+                  </button>
                   <button onClick={() => { setCurrentWeekOffset(prev => prev + 1); setFocusedDay(null); }} className="w-10 h-10 flex items-center justify-center hover:bg-slate-50 rounded-xl transition-all"><i className="fa-solid fa-chevron-right text-slate-400"></i></button>
                 </div>
               </div>
-              {/* <div className="flex items-center gap-2">
-                {focusedDay && <button onClick={() => { setFocusedDay(null); setSelectedSchoolId('all'); setSelectedTeacherId('all'); }} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[10px] font-black hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-100"><i className="fa-solid fa-arrow-left"></i> BACK TO WEEK</button>}
-                {!focusedDay && isAdmin && !isMobile && <button onClick={() => setIsCopyWeekModalOpen(true)} className="bg-white border-2 border-slate-200 px-4 py-2 rounded-xl text-[10px] font-black hover:border-indigo-500 hover:text-indigo-600 transition-all flex items-center gap-2"><i className="fa-solid fa-copy"></i> CLONE WEEK</button>}
-              </div> */}
               <div className="flex items-center gap-3">
                 {focusedDay && <button onClick={() => { setFocusedDay(null); setSelectedSchoolId('all'); setSelectedTeacherId('all'); }} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[10px] font-black hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-100"><i className="fa-solid fa-arrow-left"></i> BACK TO WEEK</button>}
                 {!focusedDay && isAdmin && !isMobile && <button onClick={() => setIsCopyWeekModalOpen(true)} className="bg-white border-2 border-slate-200 px-4 py-2 rounded-xl text-[10px] font-black hover:border-indigo-500 hover:text-indigo-600 transition-all flex items-center gap-2"><i className="fa-solid fa-copy"></i> CLONE WEEK</button>}
-                {/* {!isMobile && (
-                  <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-2xl shadow-sm border border-slate-100">
-                    <i className="fa-solid fa-text-width text-slate-400 text-xs"></i>
-                    <input
-                      type="range"
-                      min={50}
-                      max={200}
-                      step={10}
-                      value={columnScale * 100}
-                      onChange={e => setColumnScale(Number(e.target.value) / 100)}
-                      className="w-24 accent-indigo-600 cursor-pointer"
-                      title={`Column width: ${Math.round(columnScale * 100)}%`}
-                    />
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest w-8 text-right">{Math.round(columnScale * 100)}%</span>
-                    {columnScale !== 1 && (
-                      <button onClick={() => setColumnScale(1)} className="text-[8px] font-black text-indigo-500 hover:text-indigo-700 ml-1">↺</button>
-                    )}
-                  </div>
-                )} */}
               </div>
-            </header>
+            </header> */}
+            <header className="flex flex-col gap-2 max-w-7xl mx-auto w-full mb-3 lg:mb-4 shrink-0">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h1 className="text-lg lg:text-xl font-black text-slate-900 tracking-tight">
+                    {focusedDay ? focusedDay.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Weekly Loop'}
+                  </h1>
+                </div>
+                <div className="flex items-center gap-2">
+                  {/* Кнопка CLONE WEEK теперь здесь, рядом с навигацией */}
+                  {!focusedDay && isAdmin && !isMobile && (
+                  <button 
+                    onClick={() => setIsCopyWeekModalOpen(true)} 
+                    className="bg-white border-2 border-slate-200 px-3 py-2 rounded-xl text-[9px] font-black hover:border-indigo-500 hover:text-indigo-600 transition-all flex items-center gap-1.5"
+                  >
+                    <i className="fa-solid fa-copy text-xs"></i> 
+                    <span>CLONE WEEK</span>
+                  </button>
+                )}
+      
+                {/* Навигационные стрелки и Current Week */}
+                <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl shadow-sm border border-slate-100">
+                  <button 
+                    onClick={() => { setCurrentWeekOffset(prev => prev - 1); setFocusedDay(null); }} 
+                    className="w-8 h-8 flex items-center justify-center hover:bg-slate-50 rounded-lg transition-all"
+                  >
+                  <i className="fa-solid fa-chevron-left text-slate-400 text-sm"></i>
+                  </button>
+                  <button 
+                    onClick={() => { setCurrentWeekOffset(0); setFocusedDay(null); }} 
+                    className="px-2 py-1 text-[9px] font-black text-indigo-600 hover:bg-indigo-50 rounded-lg uppercase tracking-widest hidden sm:flex sm:flex-col sm:items-center leading-tight"
+                  >
+                    <span>Current</span>
+                    <span>Week</span>
+                  </button>
+                  <button 
+                    onClick={() => { setCurrentWeekOffset(prev => prev + 1); setFocusedDay(null); }} 
+                    className="w-8 h-8 flex items-center justify-center hover:bg-slate-50 rounded-lg transition-all"
+                  >
+                    <i className="fa-solid fa-chevron-right text-slate-400 text-sm"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+  
+            {/* Блок для кнопки BACK TO WEEK - только когда focusedDay активен */}
+            {focusedDay && (
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => { setFocusedDay(null); setSelectedSchoolId('all'); setSelectedTeacherId('all'); }} 
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[10px] font-black hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-100"
+                >
+                  <i className="fa-solid fa-arrow-left"></i> BACK TO WEEK
+                </button>
+              </div>
+            )}
+          </header>
             <div className="flex-1 min-h-0 flex flex-col">
               {focusedDay ? renderDailyTimetable(focusedDay) : renderWeeklyTimetable()}
             </div>
