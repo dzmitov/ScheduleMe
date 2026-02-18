@@ -40,6 +40,13 @@ const App: React.FC = () => {
   const [schools, setSchools] = useState<School[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [users, setUsers] = useState<AppUser[]>([]);
+  const [openSettingsSections, setOpenSettingsSections] = useState<Record<string, boolean>>({
+    faculty: true,
+    schools: false,
+    users: false,
+  });
+  const toggleSettingsSection = (key: string) =>
+    setOpenSettingsSections(prev => ({ ...prev, [key]: !prev[key] }));
   const [dataLoading, setDataLoading] = useState(true);
   const [lessonsError, setLessonsError] = useState<string | null>(null);
   const [teachersError, setTeachersError] = useState<string | null>(null);
@@ -706,147 +713,150 @@ const App: React.FC = () => {
           />
         )}
         {view === 'settings' && isAdmin && (
-          <div className="space-y-12 animate-fadeIn max-w-5xl mx-auto w-full overflow-y-auto custom-scrollbar pr-2 pb-20">
-            <div className="space-y-12 animate-fadeIn max-w-5xl mx-auto w-full overflow-y-auto custom-scrollbar pr-2 pb-20">
-              <header><h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Settings</h1><p className="text-slate-500 font-medium">Manage faculty, academic branches, and user access.</p></header>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
-                <section className="space-y-6">
-                  <div className="flex justify-between items-center px-2"><h2 className="text-xl lg:text-2xl font-black text-slate-800">Faculty</h2><button onClick={handleAddTeacher} className="text-indigo-600 text-[10px] font-black hover:underline uppercase tracking-widest">+ STAFF</button></div>
-                  <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden divide-y divide-slate-50">
+          <div className="animate-fadeIn max-w-3xl mx-auto w-full overflow-y-auto custom-scrollbar pr-2 pb-20 space-y-4">
+            <header className="mb-6">
+              <h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Settings</h1>
+              <p className="text-slate-500 font-medium">Manage faculty, academic branches, and user access.</p>
+            </header>
+
+            {/* ── ACCORDION HELPER ── аналог SectionBox в Fiori */}
+            {([
+              {
+                key: 'faculty',
+                icon: 'fa-chalkboard-user',
+                label: 'Faculty',
+                badge: teachers.length,
+                action: <button onClick={handleAddTeacher} className="text-indigo-600 text-[10px] font-black hover:underline uppercase tracking-widest">+ STAFF</button>,
+                content: (
+                  <div className="divide-y divide-slate-50">
                     {teachers.map(t => (
                       <div key={t.id} className="p-4 lg:p-5 flex items-center gap-4 hover:bg-slate-50/50 transition-colors">
-                        <input type="color" value={t.color} onChange={e => setTeachers(prev => prev.map(item => item.id === t.id ? { ...item, color: e.target.value } : item))} onBlur={() => handleTeacherBlur(t.id)} className="w-10 h-10 rounded-xl cursor-pointer border-2 border-white shadow-sm ring-2 ring-slate-100 shrink-0" />
-                        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-3"><input value={t.firstName} onChange={e => setTeachers(prev => prev.map(item => item.id === t.id ? { ...item, firstName: e.target.value } : item))} onBlur={() => handleTeacherBlur(t.id)} className="bg-slate-50 border-none rounded-lg px-3 py-2 text-sm font-bold text-slate-700 outline-none" placeholder="First Name" /><input value={t.lastName} onChange={e => setTeachers(prev => prev.map(item => item.id === t.id ? { ...item, lastName: e.target.value } : item))} onBlur={() => handleTeacherBlur(t.id)} className="bg-slate-50 border-none rounded-lg px-3 py-2 text-sm font-bold text-slate-700 outline-none" placeholder="Last Name" /></div>
-                        <button onClick={() => handleDeleteTeacher(t.id)} className="text-slate-300 hover:text-rose-500 transition-colors shrink-0"><i className="fa-solid fa-trash-can"></i></button>
+                        <input type="color" value={t.color}
+                          onChange={e => setTeachers(prev => prev.map(item => item.id === t.id ? { ...item, color: e.target.value } : item))}
+                          onBlur={() => handleTeacherBlur(t.id)}
+                          className="w-8 h-8 rounded-lg border-none cursor-pointer" />
+                        <div className="flex-1 grid grid-cols-2 gap-3">
+                          <input value={t.firstName}
+                            onChange={e => setTeachers(prev => prev.map(item => item.id === t.id ? { ...item, firstName: e.target.value } : item))}
+                            onBlur={() => handleTeacherBlur(t.id)}
+                            className="bg-slate-50 border-none rounded-xl px-4 py-2 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
+                            placeholder="First name" />
+                          <input value={t.lastName}
+                            onChange={e => setTeachers(prev => prev.map(item => item.id === t.id ? { ...item, lastName: e.target.value } : item))}
+                            onBlur={() => handleTeacherBlur(t.id)}
+                            className="bg-slate-50 border-none rounded-xl px-4 py-2 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
+                            placeholder="Last name" />
+                        </div>
+                        <button onClick={() => handleDeleteTeacher(t.id)} className="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center text-slate-300 hover:text-red-400 transition-colors">
+                          <i className="fa-solid fa-trash-can text-sm"></i>
+                        </button>
                       </div>
                     ))}
                   </div>
-                </section>
-                <section className="space-y-6">
-                  <div className="flex justify-between items-center px-2"><h2 className="text-xl lg:text-2xl font-black text-slate-800">Branches</h2><button onClick={handleAddSchool} className="text-indigo-600 text-[10px] font-black hover:underline uppercase tracking-widest">+ UNIT</button></div>
-                  <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden divide-y divide-slate-50">
-                    {/* {schools.map(s => (
-                      <div key={s.id} className="p-4 lg:p-5 flex items-center gap-4 hover:bg-slate-50/50 transition-colors">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black shrink-0">U</div>
-                        <input value={s.name} onChange={e => setSchools(prev => prev.map(item => item.id === s.id ? { ...item, name: e.target.value } : item))} onBlur={() => handleSchoolBlur(s.id)} className="flex-1 bg-slate-50 border-none rounded-lg px-4 py-3 text-sm font-bold text-slate-700 outline-none" placeholder="Branch Name" />
-                        <input value={s.address ?? ''} 
-                          onChange={e => setSchools(prev => prev.map(item => item.id === s.id ? { ...item, address: e.target.value } : item))} 
-                          onBlur={() => handleSchoolBlur(s.id)}  // тот же blur = тот же save
-                          className="flex-1 bg-slate-50 border-none rounded-lg px-4 py-2 text-xs text-slate-500 outline-none" 
-                          placeholder="Address (optional)" 
-      />                      
-                        <button onClick={() => handleDeleteSchool(s.id)} className="text-slate-300 hover:text-rose-500 transition-colors shrink-0"><i className="fa-solid fa-trash-can"></i></button>
-                      </div>
-                    ))} */}
+                )
+              },
+              {
+                key: 'schools',
+                icon: 'fa-school',
+                label: 'Schools',
+                badge: schools.length,
+                action: <button onClick={handleAddSchool} className="text-indigo-600 text-[10px] font-black hover:underline uppercase tracking-widest">+ SCHOOL</button>,
+                content: (
+                  <div className="divide-y divide-slate-50">
                     {schools.map(s => (
-                      <div key={s.id} className="p-4 lg:p-5 flex flex-col gap-3 hover:bg-slate-50/50 transition-colors">
-                        {/* Первая строка: иконка, название, адрес, удаление */}
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black shrink-0">U</div>
+                      <div key={s.id} className="p-4 lg:p-5 flex items-center gap-4 hover:bg-slate-50/50 transition-colors">
+                        <div className="flex-1 space-y-2">
                           <input value={s.name}
                             onChange={e => setSchools(prev => prev.map(item => item.id === s.id ? { ...item, name: e.target.value } : item))}
                             onBlur={() => handleSchoolBlur(s.id)}
-                            className="flex-1 bg-slate-50 border-none rounded-lg px-4 py-3 text-sm font-bold text-slate-700 outline-none"
-                            placeholder="Branch Name"
-                          />
-                          <input value={s.address ?? ''}
+                            className="w-full bg-slate-50 border-none rounded-xl px-4 py-2 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
+                            placeholder="School name" />
+                          <input value={s.address || ''}
                             onChange={e => setSchools(prev => prev.map(item => item.id === s.id ? { ...item, address: e.target.value } : item))}
                             onBlur={() => handleSchoolBlur(s.id)}
-                            className="flex-1 bg-slate-50 border-none rounded-lg px-4 py-2 text-xs text-slate-500 outline-none"
-                            placeholder="Address (optional)"
-                          />
-                          <button onClick={() => handleDeleteSchool(s.id)} className="text-slate-300 hover:text-rose-500 transition-colors shrink-0">
-                            <i className="fa-solid fa-trash-can"></i>
-                          </button>
+                            className="w-full bg-slate-50 border-none rounded-xl px-4 py-2 text-xs text-slate-500 outline-none focus:ring-2 focus:ring-indigo-500"
+                            placeholder="Address (optional)" />
                         </div>
-
-                        {/* Вторая строка: поле сортировки */}
-                        <div className="flex items-center gap-2 pl-14">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sort Order:</label>
-                          <input
-                            type="number"
-                            value={s.sortOrder ?? 0}
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="text-[9px] text-slate-400 font-bold uppercase">Order</span>
+                          <input type="number" value={s.sortOrder ?? 0}
                             onChange={e => setSchools(prev => prev.map(item => item.id === s.id ? { ...item, sortOrder: parseInt(e.target.value) || 0 } : item))}
                             onBlur={() => handleSchoolBlur(s.id)}
-                            className="w-20 bg-slate-50 border-none rounded-lg px-3 py-2 text-sm font-bold text-slate-700 outline-none text-center"
-                            placeholder="0"
-                          />
-                          <span className="text-[10px] text-slate-400 italic">(Lower numbers appear first)</span>
+                            className="w-16 bg-slate-50 border-none rounded-lg px-2 py-2 text-sm font-bold text-slate-700 outline-none text-center" />
                         </div>
+                        <button onClick={() => handleDeleteSchool(s.id)} className="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center text-slate-300 hover:text-red-400 transition-colors">
+                          <i className="fa-solid fa-trash-can text-sm"></i>
+                        </button>
                       </div>
                     ))}
                   </div>
-                </section>
-              </div>
-
-              {/* User Management Section */}
-              <section className="space-y-6 mt-12">
-                <div className="flex justify-between items-center px-2">
-                  <h2 className="text-xl lg:text-2xl font-black text-slate-800">User Access</h2>
-                  <button
-                    onClick={() => {
-                      setEditingUser({
-                        id: Math.random().toString(36).substring(2, 11),
-                        email: '',
-                        role: 'viewer'
-                      });
-                      setIsUserModalOpen(true);
-                    }}
-                    className="text-indigo-600 text-[10px] font-black hover:underline uppercase tracking-widest"
-                  >
-                    + USER
-                  </button>
-                </div>
-                <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
-                  <div className="p-4 bg-slate-50 border-b border-slate-100">
-                    <div className="grid grid-cols-12 gap-4">
+                )
+              },
+              {
+                key: 'users',
+                icon: 'fa-users',
+                label: 'User Access',
+                badge: users.length,
+                action: <button onClick={() => { setEditingUser({ id: Math.random().toString(36).substring(2, 11), email: '', role: 'viewer' }); setIsUserModalOpen(true); }} className="text-indigo-600 text-[10px] font-black hover:underline uppercase tracking-widest">+ USER</button>,
+                content: (
+                  <div>
+                    <div className="p-3 bg-slate-50 border-b border-slate-100 grid grid-cols-12 gap-4">
                       <div className="col-span-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Email</div>
                       <div className="col-span-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Role</div>
                       <div className="col-span-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Teacher</div>
-                      <div className="col-span-1 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Actions</div>
+                      <div className="col-span-1 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Edit</div>
                     </div>
-                  </div>
-                  <div className="divide-y divide-slate-50">
-                    {users.map(user => (
-                      <div key={user.id} className="p-4 hover:bg-slate-50/50 transition-colors">
-                        <div className="grid grid-cols-12 gap-4 items-center">
-                          <div className="col-span-5 font-medium text-slate-700 truncate">{user.email}</div>
-                          <div className="col-span-3">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.role === 'admin'
-                              ? 'bg-indigo-100 text-indigo-800'
-                              : user.role === 'teacher'
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : 'bg-slate-100 text-slate-800'
-                              }`}>
-                              {user.role === 'admin' ? 'Administrator' : user.role === 'teacher' ? 'Teacher' : 'Viewer'}
-                            </span>
-                          </div>
-                          <div className="col-span-3 text-sm text-slate-500 truncate">
-                            {user.teacherName || (user.teacherId ? 'Assigned' : '-')}
-                          </div>
-                          <div className="col-span-1 flex justify-center">
-                            <button
-                              onClick={() => {
-                                setEditingUser(user);
-                                setIsUserModalOpen(true);
-                              }}
-                              className="text-slate-400 hover:text-indigo-600 transition-colors"
-                            >
-                              <i className="fa-solid fa-pen-to-square"></i>
-                            </button>
+                    <div className="divide-y divide-slate-50">
+                      {users.map(user => (
+                        <div key={user.id} className="p-4 hover:bg-slate-50/50 transition-colors">
+                          <div className="grid grid-cols-12 gap-4 items-center">
+                            <div className="col-span-5 font-medium text-slate-700 truncate text-sm">{user.email}</div>
+                            <div className="col-span-3">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${user.role === 'admin' ? 'bg-indigo-100 text-indigo-800' : user.role === 'teacher' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-800'}`}>
+                                {user.role === 'admin' ? 'Admin' : user.role === 'teacher' ? 'Teacher' : 'Viewer'}
+                              </span>
+                            </div>
+                            <div className="col-span-3 text-sm text-slate-500 truncate">{user.teacherName || '-'}</div>
+                            <div className="col-span-1 flex justify-center">
+                              <button onClick={() => { setEditingUser(user); setIsUserModalOpen(true); }} className="text-slate-400 hover:text-indigo-600 transition-colors">
+                                <i className="fa-solid fa-pen-to-square"></i>
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                    {users.length === 0 && (
-                      <div className="p-8 text-center text-slate-400">
-                        <p>No users found. Add your first user to get started.</p>
-                      </div>
-                    )}
+                      ))}
+                      {users.length === 0 && <div className="p-8 text-center text-slate-400 text-sm">No users yet.</div>}
+                    </div>
                   </div>
-                </div>
-              </section>
-            </div>
+                )
+              }
+            ] as const).map(({ key, icon, label, badge, action, content }) => (
+              <div key={key} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                {/* Accordion Header — клик сворачивает/разворачивает, аналог SectionBox header */}
+                <button
+                  onClick={() => toggleSettingsSection(key)}
+                  className="w-full flex items-center justify-between p-5 hover:bg-slate-50/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center">
+                      <i className={`fa-solid ${icon} text-indigo-600`}></i>
+                    </div>
+                    <span className="text-lg font-black text-slate-800">{label}</span>
+                    <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{badge}</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span onClick={e => e.stopPropagation()}>{action}</span>
+                    <i className={`fa-solid fa-chevron-down text-slate-400 transition-transform duration-200 ${openSettingsSections[key] ? 'rotate-180' : ''}`}></i>
+                  </div>
+                </button>
+                {/* Accordion Body */}
+                {openSettingsSections[key] && (
+                  <div className="border-t border-slate-100">
+                    {content}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
         {view === 'admin-manage' && (
