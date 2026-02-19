@@ -590,7 +590,7 @@ const App: React.FC = () => {
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">
       <Sidebar currentView={view} onViewChange={(v) => { setView(v); setFocusedDay(null); }} />
-      <main className="flex-1 flex flex-col overflow-hidden p-4 lg:p-12">
+      <main className="flex-1 flex flex-col overflow-hidden p-2.5">
         {lessonsError && (
           <div className="mb-4 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-rose-800 text-sm font-medium">
             Lessons: {lessonsError}
