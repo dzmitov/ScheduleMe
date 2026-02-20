@@ -5,7 +5,7 @@ import { ViewType } from '../types';
 
 interface SidebarProps {
   currentView: ViewType;
-  onViewChange: (view: ViewType) => void;
+  // onViewChange: (view: ViewType) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) => {
