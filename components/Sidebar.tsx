@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom'; 
 import { SignInButton, UserButton, useUser } from '@clerk/clerk-react';
 import { ViewType } from '../types';
 
@@ -61,9 +62,10 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) => {
       
       <nav className="flex-1 px-4 space-y-2 mt-4 overflow-hidden">
         {navItems.filter(item => item.roles.includes(userRole)).map((item) => (
-          <button
+          <Link
             key={item.id}
-            onClick={() => onViewChange(item.id as ViewType)}
+            // onClick={() => onViewChange(item.id as ViewType)}
+            to={`/${item.id}`} 
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group/item ${
               currentView === item.id 
                 ? 'bg-indigo-50 text-indigo-600 font-semibold shadow-sm' 
@@ -76,7 +78,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) => {
             <span className="whitespace-nowrap opacity-0 lg:opacity-100 group-hover/sidebar:opacity-100 transition-opacity duration-300">
               {item.label}
             </span>
-          </button>
+          </Link>
         ))}
       </nav>
 

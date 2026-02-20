@@ -24,6 +24,7 @@ import {
   deleteUser,
   checkUserRole,
 } from './src/services/dbService';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const toLocalDateStr = (d: Date) => {
   const year = d.getFullYear();
@@ -34,7 +35,12 @@ const toLocalDateStr = (d: Date) => {
 
 const App: React.FC = () => {
   const { user, isSignedIn, isLoaded } = useUser();
-  const [view, setView] = useState<ViewType>('dashboard');
+  // const [view, setView] = useState<ViewType>('dashboard');
+  const navigate = useNavigate();       // инструмент для смены URL
+  const location = useLocation();       // читаем текущий URL
+
+  const view = (location.pathname.slice(1) || 'dashboard') as ViewType;
+  const setView = (v: ViewType) => navigate(`/${v}`);
 
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [schools, setSchools] = useState<School[]>([]);
@@ -589,7 +595,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">
-      <Sidebar currentView={view} onViewChange={(v) => { setView(v); setFocusedDay(null); }} />
+      <Sidebar currentView={view} /> {/*onViewChange={(v) => { setView(v); setFocusedDay(null); }} />*/}
       <main className="flex-1 flex flex-col overflow-hidden p-2.5">
         {lessonsError && (
           <div className="mb-4 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-rose-800 text-sm font-medium">
