@@ -83,15 +83,6 @@ async function ensureTable() {
   await sql`
     CREATE INDEX IF NOT EXISTS idx_app_users_email ON app_users(email)
   `;
-  
-  // Ensure default admin exists
-  const { rowCount } = await sql`SELECT 1 FROM app_users WHERE email = 'dzmitov@gmail.com'`;
-  if (rowCount === 0) {
-    await sql`
-      INSERT INTO app_users (id, email, role)
-      VALUES ('admin-1', 'dzmitov@gmail.com', 'admin')
-    `;
-  }
 }
 
 function normalizeUser(body: Record<string, unknown>) {

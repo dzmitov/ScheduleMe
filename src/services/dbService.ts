@@ -236,11 +236,6 @@ export async function checkUserRole(email: string): Promise<{
   userId?: string;
 }> {
   try {
-    // Fallback for default admin
-    if (email === 'dzmitov@gmail.com') {
-      return { isAdmin: true, role: 'admin' };
-    }
-
     const users = await fetchUsers();
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
     
@@ -256,10 +251,6 @@ export async function checkUserRole(email: string): Promise<{
     };
   } catch (error) {
     console.error('Error checking user role:', error);
-    // Fallback for default admin if database check fails
-    if (email === 'dzmitov@gmail.com') {
-      return { isAdmin: true, role: 'admin' };
-    }
     return { isAdmin: false, role: 'viewer' };
   }
 }

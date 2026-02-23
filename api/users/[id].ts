@@ -47,12 +47,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'PATCH') {
       const body = req.body as Record<string, unknown>;
       
-      // Prevent changing email of default admin
-      const { rows: userRows } = await sql`SELECT email FROM app_users WHERE id = ${id}`;
-      if (userRows[0]?.email === 'dzmitov@gmail.com' && body.email && body.email !== 'dzmitov@gmail.com') {
-        return res.status(400).json({ error: 'Cannot change email of default admin user' });
-      }
-      
       // Validate email if provided
       if (body.email && !isValidEmail(String(body.email))) {
         return res.status(400).json({ error: 'Invalid email format' });
@@ -109,12 +103,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'DELETE') {
-      // Prevent deleting default admin
-      const { rows: userRows } = await sql`SELECT email FROM app_users WHERE id = ${id}`;
-      if (userRows[0]?.email === 'dzmitov@gmail.com') {
-        return res.status(400).json({ error: 'Cannot delete default admin user' });
+      // ВМЕСТО проверки email — защита от удаления последнего админа:
+      const { rows: userRows } = await sql`SELECT role FROM app_users WHERE id = ${id}`;
+      if (userRows[0]?.role === 'admin') {
+        const { rowCount } = await sql`SELECT 1 FROM app_users WHERE role = 'admin'`;
+        if (rowCount !== null && rowCount <= 1) {
+          return res.status(400).json({ error: 'Cannot delete the last admin user' });
+        }
       }
-      
       await sql`DELETE FROM app_users WHERE id = ${id}`;
       return res.status(200).json({ success: true });
     }

@@ -5,14 +5,12 @@ import { ViewType } from '../types';
 
 interface SidebarProps {
   currentView: ViewType;
-  // onViewChange: (view: ViewType) => void;
+  isAdmin: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentView, isAdmin }) => {
   const { user, isSignedIn } = useUser();
-  
-  // Admin check: only dzmitov@gmail.com is admin
-  const isAdmin = user?.primaryEmailAddress?.emailAddress === 'dzmitov@gmail.com';
+  const userRole = isAdmin ? 'admin' : 'user';
   
   // If not signed in, show sign-in button
   if (!isSignedIn || !user) {
@@ -46,7 +44,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) => {
     { id: 'settings', label: 'Settings', icon: 'fa-gears', roles: ['admin'] },
   ];
   
-  const userRole = isAdmin ? 'admin' : 'user';
+  // const userRole = isAdmin ? 'admin' : 'user';
   const userName = user.fullName || user.firstName || user.primaryEmailAddress?.emailAddress || 'User';
 
   return (

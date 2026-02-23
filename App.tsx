@@ -98,12 +98,7 @@ const App: React.FC = () => {
         })
         .catch(err => {
           console.error('Error checking user role:', err);
-          // Fallback to default admin if it's dzmitov@gmail.com
-          if (email === 'dzmitov@gmail.com') {
-            setUserRole({ isAdmin: true, role: 'admin' });
-          } else {
             setUserRole({ isAdmin: false, role: 'viewer' });
-          }
         });
     }
   }, [isSignedIn, user]);
@@ -595,7 +590,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">
-      <Sidebar currentView={view} /> {/*onViewChange={(v) => { setView(v); setFocusedDay(null); }} />*/}
+      <Sidebar currentView={view} isAdmin={isAdmin} /> {/*onViewChange={(v) => { setView(v); setFocusedDay(null); }} />*/}
       <main className="flex-1 flex flex-col overflow-hidden p-2.5">
         {lessonsError && (
           <div className="mb-4 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-rose-800 text-sm font-medium">
@@ -994,11 +989,7 @@ const App: React.FC = () => {
                   onChange={e => setEditingUser({ ...editingUser, email: e.target.value })}
                   className="w-full bg-slate-50 border-none rounded-xl px-5 py-3 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 text-sm"
                   placeholder="user@example.com"
-                  disabled={editingUser.email === 'dzmitov@gmail.com'} // Prevent changing the default admin email
                 />
-                {editingUser.email === 'dzmitov@gmail.com' && (
-                  <p className="text-xs text-amber-600 ml-1 mt-1">Default admin email cannot be changed</p>
-                )}
               </div>
 
               <div className="space-y-2">
@@ -1031,7 +1022,7 @@ const App: React.FC = () => {
               </div>
 
               <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-8">
-                {editingUser.id && users.some(u => u.id === editingUser.id) && editingUser.email !== 'dzmitov@gmail.com' ? (
+                {editingUser.id && users.some(u => u.id === editingUser.id) ? (
                   <button
                     type="button"
                     onClick={async () => {
