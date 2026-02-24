@@ -279,7 +279,7 @@ export async function updateUser(user: AppUser): Promise<AppUser> {
   const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(user.id)}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(user),
+    body: JSON.stringify({ ...user, teacherId: user.teacherId ?? null }),
   });
   if (!res.ok) {
     const text = await res.text();
