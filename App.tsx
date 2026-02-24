@@ -535,7 +535,9 @@ const App: React.FC = () => {
   const renderWeeklyTimetable = () => {
     const dayConfigs = weekDays.map(day => {
       const dayDateStr = toLocalDateStr(day);
-      const dayLessons = lessons.filter(l => l.date === dayDateStr);
+      const dayLessons = lessons.filter(l => l.date === dayDateStr &&
+        (selectedTeacherId === 'all' || l.teacherId === selectedTeacherId)
+      );
       return {
         day,
         lessonCount: dayLessons.length,
@@ -733,8 +735,8 @@ const App: React.FC = () => {
                         {/* Промежуточный итог по дате */}
                         <div className="flex items-center gap-3 mb-4">
                           <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest ${isToday
-                              ? 'bg-indigo-600 text-white'
-                              : 'bg-slate-100 text-slate-500'
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-slate-100 text-slate-500'
                             }`}>
                             {dayLabel}
                           </span>
@@ -791,7 +793,22 @@ const App: React.FC = () => {
                   </h1>
                 </div>
                 <div className="flex items-center gap-2">
-                  {/* Кнопка CLONE WEEK теперь здесь, рядом с навигацией */}
+                  {!focusedDay && !isMobile && (
+                    <div className="flex flex-col gap-0.5">
+                      <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-1">Staff</label>
+                      <select
+                        value={selectedTeacherId}
+                        onChange={(e) => setSelectedTeacherId(e.target.value)}
+                        className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-[10px] font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 appearance-none shadow-sm hover:border-indigo-300 transition-all cursor-pointer"
+                      >
+                        <option value="all">All Faculty</option>
+                        {teachers.map(t => (
+                          <option key={t.id} value={t.id}>{t.lastName}, {t.firstName[0]}.</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
                   {!focusedDay && isAdmin && !isMobile && (
                     <button
                       onClick={() => setIsCopyWeekModalOpen(true)}
@@ -801,7 +818,6 @@ const App: React.FC = () => {
                       <span>CLONE WEEK</span>
                     </button>
                   )}
-
                   {/* Навигационные стрелки и Current Week */}
                   <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl shadow-sm border border-slate-100">
                     <button
