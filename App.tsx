@@ -172,7 +172,7 @@ const App: React.FC = () => {
       date: initialData?.date || (focusedDay ? toLocalDateStr(focusedDay) : toLocalDateStr(new Date())),
       startTime: startTime,
       endTime: addMinutes(startTime, 45),
-      room: initialData?.room || '101',
+      room: initialData?.room || '',
       status: LessonStatus.UPCOMING,
       notes: '',
       ...initialData
@@ -934,7 +934,7 @@ if (userRole.role === 'unauthorized') {
               </div>
               <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Grade / Level</label><input value={editingLesson.grade} onChange={e => setEditingLesson({ ...editingLesson, grade: e.target.value })} className="w-full bg-slate-50 border-none rounded-xl lg:rounded-2xl px-5 lg:px-6 py-3 lg:py-4 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 text-sm" placeholder="e.g. Grade 10-A" /></div>
               <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Date</label><input required type="date" value={editingLesson.date} onChange={e => setEditingLesson({ ...editingLesson, date: e.target.value })} className="w-full bg-slate-50 border-none rounded-xl lg:rounded-2xl px-5 lg:px-6 py-3 lg:py-4 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 text-sm" /></div>
-              <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Room Assignment</label><input required value={editingLesson.room} onChange={e => setEditingLesson({ ...editingLesson, room: e.target.value })} className="w-full bg-slate-50 border-none rounded-xl lg:rounded-2xl px-5 lg:px-6 py-3 lg:py-4 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 text-sm" placeholder="e.g. Room 302" /></div>
+              <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Room Assignment</label><input value={editingLesson.room} onChange={e => setEditingLesson({ ...editingLesson, room: e.target.value })} className="w-full bg-slate-50 border-none rounded-xl lg:rounded-2xl px-5 lg:px-6 py-3 lg:py-4 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 text-sm" placeholder="e.g. Room 302" /></div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Start Time</label><input required type="time" step="300" value={editingLesson.startTime} onChange={e => { const ns = e.target.value; setEditingLesson({ ...editingLesson, startTime: ns, endTime: addMinutes(ns, 45) }); }} className="w-full bg-slate-50 border-none rounded-xl lg:rounded-2xl px-4 py-3 lg:py-4 font-black text-sm" /></div>
                 <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">End Time</label><input required type="time" step="300" value={editingLesson.endTime} onChange={e => setEditingLesson({ ...editingLesson, endTime: e.target.value })} className="w-full bg-slate-50 border-none rounded-xl lg:rounded-2xl px-4 py-3 lg:py-4 font-black text-sm" /></div>
