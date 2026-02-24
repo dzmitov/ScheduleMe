@@ -155,6 +155,11 @@ const App: React.FC = () => {
     return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
   };
 
+  const getEffectiveHour = (startTime: string): number => {
+    const h = parseInt(startTime.split(':')[0]);
+    return h < 8 ? 8 : h;  // если раньше 8:00 — "прижимаем" к слоту 08:00
+  };
+
   const openEditModal = (lesson?: Lesson, initialData?: Partial<Lesson>) => {
     if (!isAdmin) return;
     const startTime = initialData?.startTime || '09:00';
@@ -422,7 +427,7 @@ if (userRole.role === 'unauthorized') {
           <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
             {timeSlots.map(time => {
               const hour = parseInt(time.split(':')[0]);
-              const timeLessons = lessons.filter(l => l.date === dateStr && parseInt(l.startTime.split(':')[0]) === hour && (selectedSchoolId === 'all' || l.schoolId === selectedSchoolId) && (selectedTeacherId === 'all' || l.teacherId === selectedTeacherId));
+              const timeLessons = lessons.filter(l => l.date === dateStr && getEffectiveHour(l.startTime) === hour && (selectedSchoolId === 'all' || l.schoolId === selectedSchoolId) && (selectedTeacherId === 'all' || l.teacherId === selectedTeacherId));
               if (timeLessons.length === 0 && !isAdmin) return null;
               return (
                 <div key={time} className="flex gap-1.5">
@@ -465,7 +470,7 @@ if (userRole.role === 'unauthorized') {
                   <td className="sticky left-0 z-30 p-2 text-[10px] font-black text-slate-400 text-center bg-slate-50/50 backdrop-blur-sm font-mono border-r border-slate-200 shadow-[2px_0_0_0_#e2e8f0]">{time}</td>
                   {filteredSchools.map(school => {
                     const hour = parseInt(time.split(':')[0]);
-                    const cellLessons = lessons.filter(l => l.date === dateStr && parseInt(l.startTime.split(':')[0]) === hour && l.schoolId === school.id);
+                    const cellLessons = lessons.filter(l => l.date === dateStr && getEffectiveHour(l.startTime) === hour && l.schoolId === school.id);
                     return (
                       <td key={`${school.id}-${time}`} className="p-1 border-l border-slate-100 relative align-top hover:bg-slate-50/40 group/cell transition-colors cursor-pointer" onClick={() => openEditModal(undefined, { date: dateStr, startTime: time, schoolId: school.id })}>
                         <div className="flex flex-col gap-1 h-full min-h-[45px]">
@@ -593,7 +598,7 @@ if (userRole.role === 'unauthorized') {
                       return <td key={`${dateStr}-empty`} className="p-0.5 border-l border-slate-100 relative align-top hover:bg-slate-50/40 group/cell cursor-pointer" onClick={() => openEditModal(undefined, { date: dateStr, startTime: time })}><div className="min-h-[45px] flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity"><span className="text-[9px] font-black text-slate-300">+ ADD</span></div></td>;
                     }
                     return activeSchools.map(school => {
-                      const cellLessons = lessons.filter(l => l.date === dateStr && parseInt(l.startTime.split(':')[0]) === hour && l.schoolId === school.id);
+                      const cellLessons = lessons.filter(l => l.date === dateStr && getEffectiveHour(l.startTime) === hour && l.schoolId === school.id);
                       return (
                         <td key={`${dateStr}-${school.id}`} className="p-1 border-l border-slate-100 relative align-top hover:bg-slate-50/40 group/cell transition-colors cursor-pointer" onClick={() => openEditModal(undefined, { date: dateStr, startTime: time, schoolId: school.id })}>
                           <div className="flex flex-col gap-1 h-full min-h-[45px]">
