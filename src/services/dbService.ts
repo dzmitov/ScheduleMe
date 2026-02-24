@@ -240,7 +240,7 @@ export async function checkUserRole(email: string): Promise<{
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
     
     if (!user) {
-      return { isAdmin: false, role: 'viewer' };
+      return { isAdmin: false, role: 'unauthorized' };
     }
     
     return {
