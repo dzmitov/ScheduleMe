@@ -73,6 +73,7 @@ const App: React.FC = () => {
   const [userRole, setUserRole] = useState<{ isAdmin: boolean; role: string; teacherId?: string; userId?: string } | null>(null);
   const [editingUser, setEditingUser] = useState<Partial<AppUser> | null>(null);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [dashboardTeacherFilter, setDashboardTeacherFilter] = useState<string>('all');
 
   // Admin check using the database
   const isAdmin = userRole?.isAdmin || false;
@@ -95,10 +96,13 @@ const App: React.FC = () => {
         .then(role => {
           console.log('User role:', role); // For debugging
           setUserRole(role);
+          if (role.role === 'teacher' && role.teacherId) {
+            setDashboardTeacherFilter(role.teacherId);
+          }
         })
         .catch(err => {
           console.error('Error checking user role:', err);
-            setUserRole({ isAdmin: false, role: 'viewer' });
+          setUserRole({ isAdmin: false, role: 'viewer' });
         });
     }
   }, [isSignedIn, user]);
@@ -128,6 +132,31 @@ const App: React.FC = () => {
     }, [user]); */
 
   const stats = useMemo(() => ({ total: lessons.length }), [lessons]);
+
+  const dashboardDayGroups = useMemo(() => {
+    const todayStr = toLocalDateStr(new Date());
+
+    const filtered = [...lessons]
+      .filter(l => {
+        if (l.date < todayStr) return false; // только сегодня и будущее
+        if (dashboardTeacherFilter !== 'all' && l.teacherId !== dashboardTeacherFilter) return false;
+        return true;
+      })
+      .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
+
+    // Группируем по дате
+    const groups: { date: string; lessons: Lesson[] }[] = [];
+    for (const lesson of filtered) {
+      const last = groups[groups.length - 1];
+      if (last && last.date === lesson.date) {
+        last.lessons.push(lesson);
+      } else {
+        if (groups.length >= 5) break; // берём только 5 ближайших дней с уроками
+        groups.push({ date: lesson.date, lessons: [lesson] });
+      }
+    }
+    return groups;
+  }, [lessons, dashboardTeacherFilter]);
 
   const getStartOfWeek = (offsetWeeks: number) => {
     const d = new Date();
@@ -368,38 +397,38 @@ const App: React.FC = () => {
     );
   }
 
-// НОВЫЙ БЛОК: залогинен в Clerk, но роль ещё загружается
-if (userRole === null) {
-  return (
-    <div className="flex h-screen w-screen items-center justify-center bg-slate-50">
-      <div className="text-center">
-        <i className="fa-solid fa-spinner fa-spin text-4xl text-indigo-600 mb-4"></i>
-        <p className="text-slate-600 font-medium">Checking access...</p>
+  // НОВЫЙ БЛОК: залогинен в Clerk, но роль ещё загружается
+  if (userRole === null) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <i className="fa-solid fa-spinner fa-spin text-4xl text-indigo-600 mb-4"></i>
+          <p className="text-slate-600 font-medium">Checking access...</p>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
-// НОВЫЙ БЛОК: в Clerk есть, в app_users нет → доступ запрещён
-if (userRole.role === 'unauthorized') {
-  return (
-    <div className="flex h-screen w-screen items-center justify-center bg-slate-50">
-      <div className="text-center max-w-md">
-        <i className="fa-solid fa-ban text-6xl text-red-400 mb-6"></i>
-        <h1 className="text-3xl font-black text-slate-900 mb-3">Access Denied</h1>
-        <p className="text-slate-500 font-medium mb-6">
-          Your account (<strong>{user.primaryEmailAddress?.emailAddress}</strong>) is not authorized to use this application.
-          Please contact the administrator.
-        </p>
-        <SignOutButton>
-          <button className="bg-slate-200 text-slate-700 px-6 py-3 rounded-xl font-bold hover:bg-slate-300 transition-all">
-            Sign Out
-          </button>
-        </SignOutButton>
+  // НОВЫЙ БЛОК: в Clerk есть, в app_users нет → доступ запрещён
+  if (userRole.role === 'unauthorized') {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-slate-50">
+        <div className="text-center max-w-md">
+          <i className="fa-solid fa-ban text-6xl text-red-400 mb-6"></i>
+          <h1 className="text-3xl font-black text-slate-900 mb-3">Access Denied</h1>
+          <p className="text-slate-500 font-medium mb-6">
+            Your account (<strong>{user.primaryEmailAddress?.emailAddress}</strong>) is not authorized to use this application.
+            Please contact the administrator.
+          </p>
+          <SignOutButton>
+            <button className="bg-slate-200 text-slate-700 px-6 py-3 rounded-xl font-bold hover:bg-slate-300 transition-all">
+              Sign Out
+            </button>
+          </SignOutButton>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   const timeSlots = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00"];
 
@@ -659,8 +688,79 @@ if (userRole.role === 'unauthorized') {
               {/* <div className="bg-indigo-600 p-6 lg:p-8 rounded-[2rem] lg:rounded-[2.5rem] text-white shadow-2xl shadow-indigo-100 relative overflow-hidden flex flex-col justify-center"><p className="opacity-70 text-[11px] font-black uppercase tracking-widest mb-1">AI Guidance</p><p className="text-base lg:text-lg font-bold italic leading-snug z-10">"{aiAdvice || "Calculating optimal patterns..."}"</p><i className="fa-solid fa-bolt absolute -right-4 -bottom-4 text-white/10 text-9xl"></i></div> */}
             </div>
             <section>
-              <div className="flex items-center justify-between mb-8"><h2 className="text-xl lg:text-2xl font-black text-slate-800 tracking-tight">Upcoming roadmap</h2><button onClick={() => setView('schedule')} className="text-indigo-600 font-black text-sm hover:underline">Full Timetable</button></div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-8 pb-10">{lessons.slice(0, 9).map(l => <LessonCard key={l.id} lesson={l} teachers={teachers} schools={schools} isAdmin={isAdmin} compact={isMobile} onEdit={openEditModal} />)}</div>
+              {/* Фильтр по учителю */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+                <h2 className="text-xl lg:text-2xl font-black text-slate-800 tracking-tight">Upcoming roadmap</h2>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-2xl px-4 py-2 shadow-sm">
+                    <i className="fa-solid fa-chalkboard-user text-indigo-400 text-sm"></i>
+                    <select
+                      value={dashboardTeacherFilter}
+                      onChange={e => setDashboardTeacherFilter(e.target.value)}
+                      className="text-sm font-bold text-slate-700 bg-transparent border-none outline-none cursor-pointer pr-1"
+                    >
+                      <option value="all">All Teachers</option>
+                      {teachers.map(t => (
+                        <option key={t.id} value={t.id}>{t.firstName} {t.lastName}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button onClick={() => setView('schedule')} className="text-indigo-600 font-black text-sm hover:underline whitespace-nowrap">
+                    Full Timetable
+                  </button>
+                </div>
+              </div>
+
+              {/* Группировка по дням */}
+              {dashboardDayGroups.length === 0 ? (
+                <div className="text-center py-16 text-slate-400">
+                  <i className="fa-solid fa-calendar-xmark text-4xl mb-3"></i>
+                  <p className="font-bold">No upcoming lessons found</p>
+                </div>
+              ) : (
+                <div className="space-y-8 pb-10">
+                  {dashboardDayGroups.map(group => {
+                    // Форматируем заголовок дня 
+                    const dayDate = new Date(group.date + 'T12:00:00');
+                    const todayStr = toLocalDateStr(new Date());
+                    const isToday = group.date === todayStr;
+                    const dayLabel = isToday
+                      ? 'Today'
+                      : dayDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+
+                    return (
+                      <div key={group.date}>
+                        {/* Промежуточный итог по дате */}
+                        <div className="flex items-center gap-3 mb-4">
+                          <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest ${isToday
+                              ? 'bg-indigo-600 text-white'
+                              : 'bg-slate-100 text-slate-500'
+                            }`}>
+                            {dayLabel}
+                          </span>
+                          <span className="text-xs font-bold text-slate-400">
+                            {group.lessons.length} lesson{group.lessons.length !== 1 ? 's' : ''}
+                          </span>
+                          <div className="flex-1 h-px bg-slate-100"></div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+                          {group.lessons.map(l => (
+                            <LessonCard
+                              key={l.id}
+                              lesson={l}
+                              teachers={teachers}
+                              schools={schools}
+                              isAdmin={isAdmin}
+                              compact={isMobile}
+                              onEdit={openEditModal}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </section>
           </div>
         )}
