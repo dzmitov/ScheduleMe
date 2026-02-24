@@ -19,14 +19,17 @@ const LessonCard: React.FC<LessonCardProps> = ({ lesson, teachers, schools, isAd
 
   if (compact) {
     return (
-      <div 
+      <div
         onClick={() => isAdmin && onEdit?.(lesson)}
         className="bg-white rounded-lg border border-slate-100 shadow-sm transition-all p-1.5 flex items-center gap-2 relative cursor-pointer active:scale-95"
         style={{ borderLeft: `3px solid ${teacherColor}` }}
       >
-        <div className="w-8 shrink-0">
-          <p className="text-[8px] font-black text-slate-400 font-mono leading-none">
+        <div className="w-14 shrink-0">
+          <p className="text-[8px] font-black text-slate-700 font-mono leading-none">
             {lesson.startTime}
+          </p>
+          <p className="text-[7px] font-medium text-slate-400 font-mono leading-none mt-0.5">
+            {lesson.endTime}
           </p>
         </div>
         <div className="flex-1 min-w-0">
@@ -50,8 +53,8 @@ const LessonCard: React.FC<LessonCardProps> = ({ lesson, teachers, schools, isAd
   }
 
   return (
-    <div 
-      className="bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all p-3 flex flex-col gap-2 relative group" 
+    <div
+      className="bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all p-3 flex flex-col gap-2 relative group"
       style={{ borderLeft: `4px solid ${teacherColor}` }}
     >
       <div className="flex justify-between items-start">
@@ -88,7 +91,7 @@ const LessonCard: React.FC<LessonCardProps> = ({ lesson, teachers, schools, isAd
       )}
 
       {isAdmin && (
-        <button 
+        <button
           onClick={() => onEdit?.(lesson)}
           className="absolute top-4 right-4 bg-slate-100 hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
           title="Edit"
