@@ -66,6 +66,7 @@ const App: React.FC = () => {
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>('all');
   const [isCopyWeekModalOpen, setIsCopyWeekModalOpen] = useState(false);
   const [copyKeepTeachers, setCopyKeepTeachers] = useState(true);
+  const [copyTargetWeekOffset, setCopyTargetWeekOffset] = useState(1);
   const [editingLesson, setEditingLesson] = useState<Partial<Lesson> | null>(null);
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -274,9 +275,13 @@ const App: React.FC = () => {
       alert('No Classes found to duplicate.');
       return;
     }
+    const targetWeekStart = getStartOfWeek(copyTargetWeekOffset);
+    const sourceWeekStart = getStartOfWeek(currentWeekOffset);
+    const diffDays = Math.round((targetWeekStart.getTime() - sourceWeekStart.getTime()) / (1000 * 60 * 60 * 24));
+
     const newLessons = currentWeekLessons.map((l) => {
       const d = new Date(l.date);
-      d.setDate(d.getDate() + 7);
+      d.setDate(d.getDate() + diffDays);
       return {
         ...l,
         id: Math.random().toString(36).substr(2, 9),
@@ -568,7 +573,7 @@ const App: React.FC = () => {
           ))}
           {isAdmin && (
             <div className="pt-2 px-1">
-              <button onClick={() => setIsCopyWeekModalOpen(true)} className="w-full py-3 rounded-xl bg-indigo-50 text-indigo-600 border border-dashed border-indigo-200 text-[10px] font-black uppercase tracking-widest"><i className="fa-solid fa-copy mr-1"></i> Clone Weekly Roadmap</button>
+              <button onClick={() => { setCopyTargetWeekOffset(currentWeekOffset + 1); setIsCopyWeekModalOpen(true); }} className="w-full py-3 rounded-xl bg-indigo-50 text-indigo-600 border border-dashed border-indigo-200 text-[10px] font-black uppercase tracking-widest"><i className="fa-solid fa-copy mr-1"></i> Clone Weekly Roadmap</button>
             </div>
           )}
         </div>
@@ -821,7 +826,7 @@ const App: React.FC = () => {
 
                   {!focusedDay && isAdmin && !isMobile && (
                     <button
-                      onClick={() => setIsCopyWeekModalOpen(true)}
+                      onClick={() => { setCopyTargetWeekOffset(currentWeekOffset + 1); setIsCopyWeekModalOpen(true); }}
                       className="bg-white border-2 border-slate-200 px-3 py-2 rounded-xl text-[9px] font-black hover:border-indigo-500 hover:text-indigo-600 transition-all flex items-center gap-1.5"
                     >
                       <i className="fa-solid fa-copy text-xs"></i>
@@ -1039,7 +1044,46 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn">
           <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 lg:p-10 relative">
             <h2 className="text-2xl font-black text-slate-800 mb-4">Clone Roadmap</h2>
-            <p className="text-slate-500 mb-6 text-sm font-medium">Duplicate all active units to the following business week.</p>
+
+            {/* Блок выбора недели-источника */}
+            <div className="mb-4 p-4 bg-indigo-50 rounded-2xl">
+              <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Copying FROM</p>
+              <p className="text-sm font-bold text-indigo-700">
+                {getStartOfWeek(currentWeekOffset).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                {' — '}
+                {(() => { const e = getStartOfWeek(currentWeekOffset); e.setDate(e.getDate() + 5); return e.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); })()}
+              </p>
+            </div>
+
+            {/* Блок выбора недели-цели */}
+            <div className="mb-6 p-4 bg-slate-50 rounded-2xl">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Copy TO</p>
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  onClick={() => setCopyTargetWeekOffset(prev => prev - 1)}
+                  disabled={copyTargetWeekOffset <= currentWeekOffset + 1}
+                  className="w-9 h-9 flex items-center justify-center bg-white rounded-xl border border-slate-200 hover:border-indigo-400 disabled:opacity-30 transition-all"
+                >
+                  <i className="fa-solid fa-chevron-left text-slate-500 text-xs"></i>
+                </button>
+                <div className="text-center flex-1">
+                  <p className="text-sm font-black text-slate-800">
+                    {getStartOfWeek(copyTargetWeekOffset).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    {' — '}
+                    {(() => { const e = getStartOfWeek(copyTargetWeekOffset); e.setDate(e.getDate() + 5); return e.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); })()}
+                  </p>
+                  <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                    {copyTargetWeekOffset === currentWeekOffset + 1 ? 'Next week' : `Week +${copyTargetWeekOffset - currentWeekOffset}`}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setCopyTargetWeekOffset(prev => prev + 1)}
+                  className="w-9 h-9 flex items-center justify-center bg-white rounded-xl border border-slate-200 hover:border-indigo-400 transition-all"
+                >
+                  <i className="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
+                </button>
+              </div>
+            </div>
             <label className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl cursor-pointer border-2 border-transparent hover:border-indigo-100 transition-all mb-8"><input type="checkbox" checked={copyKeepTeachers} onChange={e => setCopyKeepTeachers(e.target.checked)} className="w-6 h-6 rounded-lg text-indigo-600 focus:ring-indigo-500" /><span className="font-bold text-slate-700 text-sm">Transfer staff assignments</span></label>
             <div className="flex gap-4"><button onClick={() => setIsCopyWeekModalOpen(false)} className="flex-1 px-4 py-4 text-slate-400 font-black hover:bg-slate-50 rounded-2xl text-xs uppercase tracking-widest transition-colors">Cancel</button><button onClick={handleCopyWeek} className="flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all text-xs uppercase tracking-widest">Duplicate</button></div>
           </div>
