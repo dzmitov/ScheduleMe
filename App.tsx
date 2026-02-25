@@ -451,7 +451,7 @@ const App: React.FC = () => {
               </select>
             </div>
             <div className="flex flex-col gap-0.5">
-              {/* <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-1">Staff</label> */}
+              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-1">Staff</label>
               <select value={selectedTeacherId} onChange={(e) => setSelectedTeacherId(e.target.value)} className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 appearance-none shadow-sm">
                 <option value="all">All Faculty</option>
                 {teachers.map(t => <option key={t.id} value={t.id}>{t.lastName}, {t.firstName[0]}.</option>)}
