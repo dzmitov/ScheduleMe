@@ -21,10 +21,12 @@ function rowToApi(row: Record<string, unknown>) {
     status: row.status,
     topic: row.topic,
     notes: row.notes,
+    correctedDuration: row.corrected_duration ?? null,
   };
 }
 
 function normalizeLesson(body: Record<string, unknown>, id: string) {
+  const rawDuration = body.correctedDuration ?? body.corrected_duration;
   return {
     id,
     subject: String(body.subject ?? ''),
@@ -38,6 +40,7 @@ function normalizeLesson(body: Record<string, unknown>, id: string) {
     status: String(body.status ?? 'upcoming'),
     topic: body.topic != null ? String(body.topic) : null,
     notes: body.notes != null ? String(body.notes) : null,
+    correctedDuration: rawDuration != null && rawDuration !== '' ? Number(rawDuration) : null,
   };
 }
 
@@ -63,7 +66,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           subject = ${lesson.subject}, grade = ${lesson.grade}, teacher_id = ${lesson.teacherId},
           school_id = ${lesson.schoolId}, date = ${lesson.date}, start_time = ${lesson.startTime},
           end_time = ${lesson.endTime}, room = ${lesson.room}, status = ${lesson.status},
-          topic = ${lesson.topic}, notes = ${lesson.notes}
+          topic = ${lesson.topic}, notes = ${lesson.notes}, corrected_duration = ${lesson.correctedDuration}
         WHERE id = ${id}
       `;
       return res.status(200).json({ lesson: { ...lesson, id } });

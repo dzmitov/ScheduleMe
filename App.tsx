@@ -1114,6 +1114,25 @@ const App: React.FC = () => {
                 <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Start Time</label><input required type="time" step="300" value={editingLesson.startTime} onChange={e => { const ns = e.target.value; setEditingLesson({ ...editingLesson, startTime: ns, endTime: addMinutes(ns, 45) }); }} className="w-full bg-slate-50 border-none rounded-xl lg:rounded-2xl px-4 py-3 lg:py-4 font-black text-sm" /></div>
                 <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">End Time</label><input required type="time" step="300" value={editingLesson.endTime} onChange={e => setEditingLesson({ ...editingLesson, endTime: e.target.value })} className="w-full bg-slate-50 border-none rounded-xl lg:rounded-2xl px-4 py-3 lg:py-4 font-black text-sm" /></div>
               </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                  Corrected Lesson Duration (min)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="480"
+                  placeholder="e.g. 60"
+                  value={editingLesson.correctedDuration ?? ''}
+                  onChange={e =>
+                    setEditingLesson({
+                      ...editingLesson,
+                      correctedDuration: e.target.value !== '' ? Number(e.target.value) : undefined,
+                    })
+                  }
+                  className="w-full bg-slate-50 border-none rounded-xl lg:rounded-2xl px-5 lg:px-6 py-3 lg:py-4 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 text-sm"
+                />
+              </div>
               <div className="md:col-span-2 space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mission Notes / Topics</label><textarea rows={2} value={editingLesson.notes} onChange={e => setEditingLesson({ ...editingLesson, notes: e.target.value })} className="w-full bg-slate-50 border-none rounded-xl lg:rounded-2xl px-6 py-4 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 resize-none text-sm" placeholder="Additional details..."></textarea></div>
             </form>
 

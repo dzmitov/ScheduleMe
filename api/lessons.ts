@@ -16,7 +16,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (req.method === 'GET') {
       const { rows } = await sql`
-        SELECT id, subject, grade, teacher_id, school_id, date, start_time, end_time, room, status, topic, notes
+        SELECT id, subject, grade, teacher_id, school_id, date, start_time, end_time, room, status, topic, notes, corrected_duration
         FROM lessons ORDER BY date, start_time
       `;
       return res.status(200).json(rows);
@@ -26,13 +26,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const body = req.body as Record<string, unknown>;
       const lesson = normalizeLesson(body);
       await sql`
-        INSERT INTO lessons (id, subject, grade, teacher_id, school_id, date, start_time, end_time, room, status, topic, notes)
-        VALUES (${lesson.id}, ${lesson.subject}, ${lesson.grade}, ${lesson.teacherId}, ${lesson.schoolId}, ${lesson.date}, ${lesson.startTime}, ${lesson.endTime}, ${lesson.room}, ${lesson.status}, ${lesson.topic ?? null}, ${lesson.notes ?? null})
+        INSERT INTO lessons (id, subject, grade, teacher_id, school_id, date, start_time, end_time, room, status, topic, notes, corrected_duration)
+        VALUES (${lesson.id}, ${lesson.subject}, ${lesson.grade}, ${lesson.teacherId}, ${lesson.schoolId}, ${lesson.date}, ${lesson.startTime}, ${lesson.endTime}, ${lesson.room}, ${lesson.status}, ${lesson.topic ?? null}, ${lesson.notes ?? null}, ${lesson.correctedDuration ?? null})
         ON CONFLICT (id) DO UPDATE SET
           subject = EXCLUDED.subject, grade = EXCLUDED.grade, teacher_id = EXCLUDED.teacher_id,
           school_id = EXCLUDED.school_id, date = EXCLUDED.date, start_time = EXCLUDED.start_time,
           end_time = EXCLUDED.end_time, room = EXCLUDED.room, status = EXCLUDED.status,
-          topic = EXCLUDED.topic, notes = EXCLUDED.notes
+          topic = EXCLUDED.topic, notes = EXCLUDED.notes, corrected_duration = EXCLUDED.corrected_duration
       `;
       return res.status(200).json({ lesson: lesson });
     }
@@ -77,10 +77,12 @@ function rowToApi(row: Record<string, unknown>) {
     status: row.status,
     topic: row.topic,
     notes: row.notes,
+    correctedDuration: row.corrected_duration ?? null,
   };
 }
 
 function normalizeLesson(body: Record<string, unknown>) {
+  const rawDuration = body.correctedDuration ?? body.corrected_duration;
   return {
     id: String(body.id ?? ''),
     subject: String(body.subject ?? ''),
@@ -94,5 +96,6 @@ function normalizeLesson(body: Record<string, unknown>) {
     status: String(body.status ?? 'upcoming'),
     topic: body.topic != null ? String(body.topic) : null,
     notes: body.notes != null ? String(body.notes) : null,
+    correctedDuration: rawDuration != null && rawDuration !== '' ? Number(rawDuration) : null,
   };
 }

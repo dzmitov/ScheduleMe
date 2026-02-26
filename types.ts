@@ -49,6 +49,7 @@ export interface Lesson {
   status: LessonStatus;
   topic?: string;
   notes?: string;
+  correctedDuration?: number;
 }
 
 export interface LessonPlan {

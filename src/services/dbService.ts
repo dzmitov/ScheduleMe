@@ -133,6 +133,10 @@ function rowToLesson(row: Record<string, unknown>): Lesson {
   status: (row.status as LessonStatus) ?? LessonStatus.UPCOMING,
     topic: row.topic != null ? String(row.topic) : undefined,
     notes: row.notes != null ? String(row.notes) : undefined,
+    correctedDuration:
+  row.correctedDuration != null ? Number(row.correctedDuration) 
+    : row.corrected_duration != null ? Number(row.corrected_duration)
+    : undefined,
   };
 }
 
