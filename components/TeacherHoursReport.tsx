@@ -109,7 +109,6 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
         durationMinutes,
         correctesDuration: lesson.correctedDuration ?? null,
         schoolName: school?.name || 'Unknown',
-        subject: lesson.subject,
         grade: lesson.grade,
       };
     });
