@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Lesson, Teacher, School } from '../types';
+import * as XLSX from 'xlsx';
 
 interface TeacherHoursReportAdvancedProps {
   lessons: Lesson[];
@@ -209,6 +210,45 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
     }
   };
 
+  const exportToExcel = () => {
+    // Формируем массив строк 
+    const wsData = [
+      ['Teacher', 'Date', 'Start Time', 'End Time', 'Duration (min)', 'Corrected Duration (min)', 'School', 'Grade'],
+      ...reportData.map(row => [
+        row.teacherName,
+        row.date,
+        row.startTime,
+        row.endTime,
+        row.durationMinutes,
+        row.correctedDuration ?? '',
+        row.schoolName,
+        row.grade,
+      ])
+    ];
+
+    // Создаём worksheet
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Задаём ширину колонок
+    ws['!cols'] = [
+      { wch: 25 }, // Teacher
+      { wch: 12 }, // Date
+      { wch: 12 }, // Start Time
+      { wch: 12 }, // End Time
+      { wch: 18 }, // Duration
+      { wch: 24 }, // Corrected Duration
+      { wch: 20 }, // School
+      { wch: 10 }, // Grade
+    ];
+
+    // Создаём workbook и добавляем лист
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Teacher Hours');
+
+    // Скачиваем файл
+    XLSX.writeFile(wb, `teacher_hours_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
   // Экспорт в CSV
   const exportToCSV = () => {
     const headers = ['Teacher', 'Date', 'Start Time', 'End Time', 'Duration (min)', 'Corrected Duretion (min)', 'School', 'Grade'];
@@ -307,6 +347,13 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
         </div>
         <div className="flex gap-2 no-print">
           <button
+            onClick={exportToExcel}
+            className="bg-green-700 text-white px-4 py-2 rounded-xl font-bold shadow-lg shadow-green-200 hover:bg-green-800 transition-all text-sm"
+          >
+            <i className="fa-solid fa-file-excel mr-2"></i>
+            Excel
+          </button>
+          <button
             onClick={exportToCSV}
             className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold shadow-lg shadow-emerald-200 hover:bg-emerald-700 transition-all text-sm"
           >
@@ -328,8 +375,8 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
         <button
           onClick={() => setViewMode('detailed')}
           className={`px-4 py-2 rounded-lg font-bold transition-all ${viewMode === 'detailed'
-              ? 'bg-indigo-600 text-white shadow-lg'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            ? 'bg-indigo-600 text-white shadow-lg'
+            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
         >
           <i className="fa-solid fa-table mr-2"></i>
@@ -338,8 +385,8 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
         <button
           onClick={() => setViewMode('summary')}
           className={`px-4 py-2 rounded-lg font-bold transition-all ${viewMode === 'summary'
-              ? 'bg-indigo-600 text-white shadow-lg'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            ? 'bg-indigo-600 text-white shadow-lg'
+            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
         >
           <i className="fa-solid fa-chart-simple mr-2"></i>
@@ -348,8 +395,8 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
         <button
           onClick={() => setViewMode('chart')}
           className={`px-4 py-2 rounded-lg font-bold transition-all ${viewMode === 'chart'
-              ? 'bg-indigo-600 text-white shadow-lg'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            ? 'bg-indigo-600 text-white shadow-lg'
+            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
         >
           <i className="fa-solid fa-chart-bar mr-2"></i>
@@ -618,7 +665,7 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
                             {row.durationMinutes}
                           </td>
                           <td className="px-4 py-3 text-sm font-bold text-amber-600">
-                             {row.correctedDuration} {/* != null ? `${row.correctedDuration}m` : '—'} */}
+                            {row.correctedDuration} {/* != null ? `${row.correctedDuration}m` : '—'} */}
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-600">
                             {row.schoolName}
