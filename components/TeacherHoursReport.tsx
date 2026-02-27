@@ -618,7 +618,7 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
                             {row.durationMinutes}
                           </td>
                           <td className="px-4 py-3 text-sm font-bold text-amber-600">
-                            {row.correctedDuration != null ? `${row.correctedDuration}m` : '—'}
+                             {row.correctedDuration} {/* != null ? `${row.correctedDuration}m` : '—'} */}
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-600">
                             {row.schoolName}
@@ -726,7 +726,7 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
                           <td className="px-3 py-2">{row.date}</td>
                           <td className="px-3 py-2 font-mono">{row.startTime} - {row.endTime}</td>
                           <td className="px-3 py-2 font-bold text-indigo-600">{row.durationMinutes}m</td>
-                          <td className="px-4 py-3 text-amber-600 font-bold">{row.correDuration != null ? `${row.correDuration}m` : '—'}</td>
+                          <td className="px-4 py-3 text-amber-600 font-bold">{row.correctedDuration != null ? `${row.correctedDuration}m` : '—'}</td>
                           <td className="px-3 py-2">{row.schoolName}</td>
                         </tr>
                       ))
