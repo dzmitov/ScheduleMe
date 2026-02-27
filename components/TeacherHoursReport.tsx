@@ -556,6 +556,13 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
                     </div>
                   </th>
                   <th
+                    className="px-4 py-3 text-left text-xs font-black text-slate-600 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      Corrected Duration (min)
+                    </div>
+                  </th>
+                  <th
                     onClick={() => handleSort('schoolName')}
                     className="px-4 py-3 text-left text-xs font-black text-slate-600 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition-colors"
                   >
