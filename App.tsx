@@ -67,6 +67,8 @@ const App: React.FC = () => {
   const [isCopyWeekModalOpen, setIsCopyWeekModalOpen] = useState(false);
   const [copyKeepTeachers, setCopyKeepTeachers] = useState(true);
   const [copyTargetWeekOffset, setCopyTargetWeekOffset] = useState(1);
+  const [isCopyDayModalOpen, setIsCopyDayModalOpen] = useState(false);
+  const [copyDayTargetDate, setCopyDayTargetDate] = useState<string>('');
   const [editingLesson, setEditingLesson] = useState<Partial<Lesson> | null>(null);
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -298,6 +300,40 @@ const App: React.FC = () => {
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : 'Failed to clone week');
+    }
+  };
+
+  const handleCopyDay = async () => {
+    if (!isAdmin || !focusedDay) return;
+
+    const sourceDateStr = toLocalDateStr(focusedDay);
+    const dayLessons = lessons.filter((l) => l.date === sourceDateStr);
+
+    if (dayLessons.length === 0) {
+      alert('No classes found for this day.');
+      return;
+    }
+    if (!copyDayTargetDate || copyDayTargetDate === sourceDateStr) {
+      alert('Please select a different target date.');
+      return;
+    }
+
+    const newLessons = dayLessons.map((l) => ({
+      ...l,
+      id: Math.random().toString(36).substr(2, 9),
+      date: copyDayTargetDate,
+      teacherId: copyKeepTeachers ? l.teacherId : '',
+      status: LessonStatus.UPCOMING,
+    }));
+
+    try {
+      await Promise.all(newLessons.map((lesson) => addLesson(lesson)));
+      setLessons((prev) => [...prev, ...newLessons]);
+      setIsCopyDayModalOpen(false);
+      alert(`Successfully cloned ${newLessons.length} session(s) to ${copyDayTargetDate}.`);
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Failed to clone day');
     }
   };
 
@@ -861,6 +897,20 @@ const App: React.FC = () => {
               {/* Блок для кнопки BACK TO WEEK - только когда focusedDay активен */}
               {focusedDay && (
                 <div className="flex items-center gap-3">
+                  {isAdmin && (
+                    <button
+                      onClick={() => {
+                        const next = new Date(focusedDay);
+                        next.setDate(next.getDate() + 7);
+                        setCopyDayTargetDate(toLocalDateStr(next));
+                        setIsCopyDayModalOpen(true);
+                      }}
+                      className="bg-white border-2 border-slate-200 px-3 py-2 rounded-xl text-[9px] font-black hover:border-indigo-500 hover:text-indigo-600 transition-all flex items-center gap-1.5"
+                    >
+                      <i className="fa-solid fa-copy text-xs"></i>
+                      <span>CLONE DAY</span>
+                    </button>
+                  )}
                   <button
                     onClick={() => { setFocusedDay(null); setSelectedSchoolId('all'); setSelectedTeacherId('all'); }}
                     className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[10px] font-black hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-100"
@@ -1089,7 +1139,63 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Clone Day Modal */}
+      {isCopyDayModalOpen && focusedDay && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn">
+          <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 lg:p-10 relative">
+            <h2 className="text-2xl font-black text-slate-800 mb-4">Clone Day</h2>
 
+            {/* Источник — текущий день (аналог "Copying FROM" в Clone Week) */}
+            <div className="mb-4 p-4 bg-indigo-50 rounded-2xl">
+              <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Copying FROM</p>
+              <p className="text-sm font-bold text-indigo-700">
+                {focusedDay.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+              </p>
+              <p className="text-[10px] text-indigo-400 mt-1">
+                {lessons.filter(l => l.date === toLocalDateStr(focusedDay)).length} session(s)
+              </p>
+            </div>
+
+            {/* Цель — выбор даты через input type="date" */}
+            <div className="mb-6 p-4 bg-slate-50 rounded-2xl">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Copy TO</p>
+              <input
+                type="date"
+                value={copyDayTargetDate}
+                min={toLocalDateStr(new Date())}
+                onChange={(e) => setCopyDayTargetDate(e.target.value)}
+                className="w-full bg-white border-2 border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition-all"
+              />
+            </div>
+
+            {/* Сохранить учителей — тот же чекбокс что в Clone Week */}
+            <label className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl cursor-pointer border-2 border-transparent hover:border-indigo-100 transition-all mb-8">
+              <input
+                type="checkbox"
+                checked={copyKeepTeachers}
+                onChange={e => setCopyKeepTeachers(e.target.checked)}
+                className="w-6 h-6 rounded-lg text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="font-bold text-slate-700 text-sm">Transfer staff assignments</span>
+            </label>
+
+            <div className="flex gap-4">
+              <button
+                onClick={() => setIsCopyDayModalOpen(false)}
+                className="flex-1 px-4 py-4 text-slate-400 font-black hover:bg-slate-50 rounded-2xl text-xs uppercase tracking-widest transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCopyDay}
+                className="flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all text-xs uppercase tracking-widest"
+              >
+                Duplicate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Edit Session Modal */}
       {isModalOpen && editingLesson && (
         <div className="fixed inset-0 z-[210] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn">
