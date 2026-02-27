@@ -14,8 +14,8 @@ interface ReportRow {
   startTime: string;
   endTime: string;
   durationMinutes: number;
+  correctedDuration: number | null;
   schoolName: string;
-  subject: string;
   grade: string;
 }
 
@@ -34,16 +34,14 @@ interface FilterVariant {
   dateTo: string;
   teacherId: string;
   schoolId: string;
-  minDuration: number;
-  maxDuration: number;
 }
 
 type ViewMode = 'detailed' | 'summary' | 'chart';
 
-const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({ 
-  lessons, 
-  teachers, 
-  schools 
+const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
+  lessons,
+  teachers,
+  schools
 }) => {
   // === Фильтры ===
   const [dateFrom, setDateFrom] = useState<string>('');
@@ -52,7 +50,7 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
   const [selectedSchoolId, setSelectedSchoolId] = useState<string>('all');
   const [minDuration, setMinDuration] = useState<number>(0);
   const [maxDuration, setMaxDuration] = useState<number>(300);
-  
+
   // === Сортировка ===
   const [sortField, setSortField] = useState<keyof ReportRow>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -86,20 +84,18 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
       if (dateTo && lesson.date > dateTo) return false;
       if (selectedTeacherId !== 'all' && lesson.teacherId !== selectedTeacherId) return false;
       if (selectedSchoolId !== 'all' && lesson.schoolId !== selectedSchoolId) return false;
-      
+
       const startMinutes = timeToMinutes(lesson.startTime);
       const endMinutes = timeToMinutes(lesson.endTime);
       const duration = endMinutes - startMinutes;
-      
-      if (duration < minDuration || duration > maxDuration) return false;
-      
+
       return true;
     });
 
     const rows: ReportRow[] = filtered.map(lesson => {
       const teacher = teachers.find(t => t.id === lesson.teacherId);
       const school = schools.find(s => s.id === lesson.schoolId);
-      
+
       const startMinutes = timeToMinutes(lesson.startTime);
       const endMinutes = timeToMinutes(lesson.endTime);
       const durationMinutes = endMinutes - startMinutes;
@@ -111,6 +107,7 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
         startTime: lesson.startTime,
         endTime: lesson.endTime,
         durationMinutes,
+        correctesDuration: lesson.correctedDuration ?? null,
         schoolName: school?.name || 'Unknown',
         subject: lesson.subject,
         grade: lesson.grade,
@@ -120,14 +117,14 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
     rows.sort((a, b) => {
       const aVal = a[sortField];
       const bVal = b[sortField];
-      
+
       if (typeof aVal === 'number' && typeof bVal === 'number') {
         return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
       }
-      
+
       const aStr = String(aVal);
       const bStr = String(bVal);
-      
+
       if (sortDirection === 'asc') {
         return aStr.localeCompare(bStr);
       } else {
@@ -136,15 +133,15 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
     });
 
     return rows;
-  }, [lessons, teachers, schools, dateFrom, dateTo, selectedTeacherId, selectedSchoolId, minDuration, maxDuration, sortField, sortDirection]);
+  }, [lessons, teachers, schools, dateFrom, dateTo, selectedTeacherId, selectedSchoolId, sortField, sortDirection]);
 
   // Группировка по учителям
   const teacherSummary = useMemo<TeacherSummary[]>(() => {
     const groups = new Map<string, TeacherSummary>();
-    
+
     reportData.forEach(row => {
       const existing = groups.get(row.teacherId);
-      
+
       if (existing) {
         existing.totalLessons++;
         existing.totalMinutes += row.durationMinutes;
@@ -159,22 +156,22 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
         });
       }
     });
-    
+
     groups.forEach(summary => {
       summary.totalHours = Math.floor(summary.totalMinutes / 60);
       summary.avgDuration = Math.round(summary.totalMinutes / summary.totalLessons);
     });
-    
+
     return Array.from(groups.values()).sort((a, b) => b.totalMinutes - a.totalMinutes);
   }, [reportData]);
 
   // Subtotals по датам
   const subtotalsByDate = useMemo(() => {
     const groups = new Map<string, { date: string; count: number; minutes: number }>();
-    
+
     reportData.forEach(row => {
       const existing = groups.get(row.date);
-      
+
       if (existing) {
         existing.count++;
         existing.minutes += row.durationMinutes;
@@ -186,7 +183,7 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
         });
       }
     });
-    
+
     return groups;
   }, [reportData]);
 
@@ -215,7 +212,7 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
 
   // Экспорт в CSV
   const exportToCSV = () => {
-    const headers = ['Teacher', 'Date', 'Start Time', 'End Time', 'Duration (min)', 'School', 'Subject', 'Grade'];
+    const headers = ['Teacher', 'Date', 'Start Time', 'End Time', 'Duration (min)', 'Corrected Duretion (min)', 'School', 'Grade'];
     const csvContent = [
       headers.join(','),
       ...reportData.map(row => [
@@ -224,8 +221,8 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
         row.startTime,
         row.endTime,
         row.durationMinutes,
+        row.correDuration ?? '',
         `"${row.schoolName}"`,
-        `"${row.subject}"`,
         `"${row.grade}"`,
       ].join(','))
     ].join('\n');
@@ -245,17 +242,15 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
   const saveVariant = () => {
     const name = prompt('Enter variant name:');
     if (!name) return;
-    
+
     const variant: FilterVariant = {
       name,
       dateFrom,
       dateTo,
       teacherId: selectedTeacherId,
       schoolId: selectedSchoolId,
-      minDuration,
-      maxDuration
     };
-    
+
     const newVariants = [...variants, variant];
     setVariants(newVariants);
     localStorage.setItem('teacherReportVariants', JSON.stringify(newVariants));
@@ -268,8 +263,6 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
     setDateTo(variant.dateTo);
     setSelectedTeacherId(variant.teacherId);
     setSelectedSchoolId(variant.schoolId);
-    setMinDuration(variant.minDuration);
-    setMaxDuration(variant.maxDuration);
     setCurrentVariantName(variant.name);
   };
 
@@ -290,8 +283,6 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
     setDateTo('');
     setSelectedTeacherId('all');
     setSelectedSchoolId('all');
-    setMinDuration(0);
-    setMaxDuration(300);
     setCurrentVariantName('');
   };
 
@@ -335,35 +326,32 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
 
       {/* Переключатель режимов */}
       <div className="flex flex-wrap gap-2 no-print">
-        <button 
+        <button
           onClick={() => setViewMode('detailed')}
-          className={`px-4 py-2 rounded-lg font-bold transition-all ${
-            viewMode === 'detailed' 
-              ? 'bg-indigo-600 text-white shadow-lg' 
+          className={`px-4 py-2 rounded-lg font-bold transition-all ${viewMode === 'detailed'
+              ? 'bg-indigo-600 text-white shadow-lg'
               : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-          }`}
+            }`}
         >
           <i className="fa-solid fa-table mr-2"></i>
           Detailed
         </button>
-        <button 
+        <button
           onClick={() => setViewMode('summary')}
-          className={`px-4 py-2 rounded-lg font-bold transition-all ${
-            viewMode === 'summary' 
-              ? 'bg-indigo-600 text-white shadow-lg' 
+          className={`px-4 py-2 rounded-lg font-bold transition-all ${viewMode === 'summary'
+              ? 'bg-indigo-600 text-white shadow-lg'
               : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-          }`}
+            }`}
         >
           <i className="fa-solid fa-chart-simple mr-2"></i>
           Summary
         </button>
-        <button 
+        <button
           onClick={() => setViewMode('chart')}
-          className={`px-4 py-2 rounded-lg font-bold transition-all ${
-            viewMode === 'chart' 
-              ? 'bg-indigo-600 text-white shadow-lg' 
+          className={`px-4 py-2 rounded-lg font-bold transition-all ${viewMode === 'chart'
+              ? 'bg-indigo-600 text-white shadow-lg'
               : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-          }`}
+            }`}
         >
           <i className="fa-solid fa-chart-bar mr-2"></i>
           Chart
@@ -376,7 +364,7 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
           <i className="fa-solid fa-filter text-indigo-600"></i>
           Filters
         </h2>
-        
+
         {/* Основные фильтры */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           <div>
@@ -440,46 +428,18 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
           </div>
         </div>
 
-        {/* Фильтры по длительности */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">
-              Min Duration (minutes)
-            </label>
-            <input
-              type="number"
-              value={minDuration}
-              onChange={(e) => setMinDuration(Number(e.target.value))}
-              min={0}
-              className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">
-              Max Duration (minutes)
-            </label>
-            <input
-              type="number"
-              value={maxDuration}
-              onChange={(e) => setMaxDuration(Number(e.target.value))}
-              min={0}
-              className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            />
-          </div>
-        </div>
-
         {/* Управление вариантами */}
         <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-200">
-          <button 
+          <button
             onClick={saveVariant}
             className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 text-sm font-bold transition-all"
           >
             <i className="fa-solid fa-save mr-2"></i>
             Save Variant
           </button>
-          
+
           {variants.length > 0 && (
-            <select 
+            <select
               onChange={(e) => {
                 if (e.target.value) {
                   const variant = variants.find(v => v.name === e.target.value);
@@ -497,7 +457,7 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
           )}
 
           {variants.length > 0 && currentVariantName && (
-            <button 
+            <button
               onClick={() => deleteVariant(currentVariantName)}
               className="px-4 py-2 bg-rose-100 text-rose-700 rounded-lg hover:bg-rose-200 text-sm font-bold transition-all"
             >
@@ -506,7 +466,7 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
             </button>
           )}
 
-          <button 
+          <button
             onClick={resetFilters}
             className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 text-sm font-bold transition-all"
           >
@@ -541,7 +501,7 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th 
+                  <th
                     onClick={() => handleSort('teacherName')}
                     className="px-4 py-3 text-left text-xs font-black text-slate-600 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition-colors"
                   >
@@ -552,7 +512,7 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
                       )}
                     </div>
                   </th>
-                  <th 
+                  <th
                     onClick={() => handleSort('date')}
                     className="px-4 py-3 text-left text-xs font-black text-slate-600 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition-colors"
                   >
@@ -563,7 +523,7 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
                       )}
                     </div>
                   </th>
-                  <th 
+                  <th
                     onClick={() => handleSort('startTime')}
                     className="px-4 py-3 text-left text-xs font-black text-slate-600 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition-colors"
                   >
@@ -574,7 +534,7 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
                       )}
                     </div>
                   </th>
-                  <th 
+                  <th
                     onClick={() => handleSort('endTime')}
                     className="px-4 py-3 text-left text-xs font-black text-slate-600 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition-colors"
                   >
@@ -585,7 +545,7 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
                       )}
                     </div>
                   </th>
-                  <th 
+                  <th
                     onClick={() => handleSort('durationMinutes')}
                     className="px-4 py-3 text-left text-xs font-black text-slate-600 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition-colors"
                   >
@@ -596,7 +556,7 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
                       )}
                     </div>
                   </th>
-                  <th 
+                  <th
                     onClick={() => handleSort('schoolName')}
                     className="px-4 py-3 text-left text-xs font-black text-slate-600 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition-colors"
                   >
@@ -636,10 +596,10 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
                             {row.teacherName}
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-600">
-                            {new Date(row.date).toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric', 
-                              year: 'numeric' 
+                            {new Date(row.date).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric'
                             })}
                           </td>
                           <td className="px-4 py-3 text-sm font-mono text-slate-600">
@@ -651,11 +611,11 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
                           <td className="px-4 py-3 text-sm font-bold text-indigo-600">
                             {row.durationMinutes}
                           </td>
-                          <td className="px-4 py-3 text-sm text-slate-600">
-                            {row.schoolName}
+                          <td className="px-4 py-3 text-sm font-bold text-amber-600">
+                            {row.correctedDuration != null ? `${row.correctedDuration}m` : '—'}
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-600">
-                            {row.subject}
+                            {row.schoolName}
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-600">
                             {row.grade}
@@ -699,11 +659,10 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
             </thead>
             <tbody className="divide-y divide-slate-100">
               {teacherSummary.map(summary => (
-                <tr 
-                  key={summary.teacherId} 
-                  className={`hover:bg-slate-50 transition-colors ${
-                    selectedTeacherForDrilldown === summary.teacherId ? 'bg-indigo-50' : ''
-                  }`}
+                <tr
+                  key={summary.teacherId}
+                  className={`hover:bg-slate-50 transition-colors ${selectedTeacherForDrilldown === summary.teacherId ? 'bg-indigo-50' : ''
+                    }`}
                 >
                   <td className="px-4 py-3 font-semibold text-slate-900">{summary.teacherName}</td>
                   <td className="px-4 py-3 text-right text-indigo-600 font-bold">{summary.totalLessons}</td>
@@ -749,8 +708,8 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
                       <th className="px-3 py-2 text-left text-xs font-bold text-slate-600">Date</th>
                       <th className="px-3 py-2 text-left text-xs font-bold text-slate-600">Time</th>
                       <th className="px-3 py-2 text-left text-xs font-bold text-slate-600">Duration</th>
+                      <th className="px-3 py-2 text-left text-xs font-bold text-slate-600">CorrectedDuration</th>
                       <th className="px-3 py-2 text-left text-xs font-bold text-slate-600">School</th>
-                      <th className="px-3 py-2 text-left text-xs font-bold text-slate-600">Subject</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -761,8 +720,8 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
                           <td className="px-3 py-2">{row.date}</td>
                           <td className="px-3 py-2 font-mono">{row.startTime} - {row.endTime}</td>
                           <td className="px-3 py-2 font-bold text-indigo-600">{row.durationMinutes}m</td>
+                          <td className="px-4 py-3 text-amber-600 font-bold">{row.correDuration != null ? `${row.correDuration}m` : '—'}</td>
                           <td className="px-3 py-2">{row.schoolName}</td>
-                          <td className="px-3 py-2">{row.subject} ({row.grade})</td>
                         </tr>
                       ))
                     }
@@ -783,14 +742,14 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
               {teacherSummary.map(summary => {
                 const maxHours = Math.max(...teacherSummary.map(s => s.totalHours));
                 const widthPercent = maxHours > 0 ? (summary.totalHours / maxHours) * 100 : 0;
-                
+
                 return (
                   <div key={summary.teacherId} className="flex items-center gap-4">
                     <div className="w-40 text-sm font-semibold truncate text-right" title={summary.teacherName}>
                       {summary.teacherName}
                     </div>
                     <div className="flex-1 relative h-10 bg-slate-100 rounded-lg overflow-hidden">
-                      <div 
+                      <div
                         className="absolute left-0 top-0 h-full bg-gradient-to-r from-indigo-500 to-indigo-600 flex items-center justify-end px-3 transition-all duration-500"
                         style={{ width: `${widthPercent}%` }}
                       >
@@ -820,7 +779,7 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
             <h3 className="text-lg font-black text-slate-800 mb-6">Top 5 Teachers by Hours</h3>
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               {teacherSummary.slice(0, 5).map((summary, index) => (
-                <div 
+                <div
                   key={summary.teacherId}
                   className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-4 border-2 border-indigo-100 relative overflow-hidden"
                 >
