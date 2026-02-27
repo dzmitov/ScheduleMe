@@ -897,6 +897,12 @@ const App: React.FC = () => {
               {/* Блок для кнопки BACK TO WEEK - только когда focusedDay активен */}
               {focusedDay && (
                 <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => { setFocusedDay(null); setSelectedSchoolId('all'); setSelectedTeacherId('all'); }}
+                    className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[10px] font-black hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-100"
+                  >
+                    <i className="fa-solid fa-arrow-left"></i> BACK TO WEEK
+                  </button>
                   {isAdmin && (
                     <button
                       onClick={() => {
@@ -911,12 +917,6 @@ const App: React.FC = () => {
                       <span>CLONE DAY</span>
                     </button>
                   )}
-                  <button
-                    onClick={() => { setFocusedDay(null); setSelectedSchoolId('all'); setSelectedTeacherId('all'); }}
-                    className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[10px] font-black hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-100"
-                  >
-                    <i className="fa-solid fa-arrow-left"></i> BACK TO WEEK
-                  </button>
                 </div>
               )}
             </header>
