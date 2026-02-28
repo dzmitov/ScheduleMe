@@ -25,13 +25,10 @@ import {
   checkUserRole,
 } from './src/services/dbService';
 import { useNavigate, useLocation } from 'react-router-dom';
+import LoadingScreen  from './components/layout/LoadingScreen';
+import AccessDenied   from './components/layout/AccessDenied';
+import { toLocalDateStr, getStartOfWeek, getWeekDays } from './src/utils/dateUtils';
 
-const toLocalDateStr = (d: Date) => {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
 
 const App: React.FC = () => {
   const { user, isSignedIn, isLoaded } = useUser();
@@ -161,24 +158,7 @@ const App: React.FC = () => {
     return groups;
   }, [lessons, dashboardTeacherFilter]);
 
-  const getStartOfWeek = (offsetWeeks: number) => {
-    const d = new Date();
-    d.setHours(12, 0, 0, 0);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    d.setDate(diff + (offsetWeeks * 7));
-    d.setHours(0, 0, 0, 0);
-    return d;
-  };
-
-  const weekDays = useMemo(() => {
-    const start = getStartOfWeek(currentWeekOffset);
-    return Array.from({ length: 6 }, (_, i) => {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      return d;
-    });
-  }, [currentWeekOffset]);
+  const weekDays = useMemo(() => getWeekDays(currentWeekOffset), [currentWeekOffset]);
 
   const addMinutes = (time: string, mins: number) => {
     const [h, m] = time.split(':').map(Number);
@@ -411,16 +391,7 @@ const App: React.FC = () => {
   };
 
   // Show loading state while Clerk is initializing
-  if (!isLoaded) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-slate-50">
-        <div className="text-center">
-          <i className="fa-solid fa-spinner fa-spin text-4xl text-indigo-600 mb-4"></i>
-          <p className="text-slate-600 font-medium">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  if (!isLoaded) return <LoadingScreen />;
 
   // If not signed in, show the sidebar with sign-in button
   if (!isSignedIn || !user) {
@@ -439,36 +410,11 @@ const App: React.FC = () => {
   }
 
   // НОВЫЙ БЛОК: залогинен в Clerk, но роль ещё загружается
-  if (userRole === null) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-slate-50">
-        <div className="text-center">
-          <i className="fa-solid fa-spinner fa-spin text-4xl text-indigo-600 mb-4"></i>
-          <p className="text-slate-600 font-medium">Checking access...</p>
-        </div>
-      </div>
-    );
-  }
+  if (userRole === null) return <LoadingScreen message="Checking access..." />;
 
   // НОВЫЙ БЛОК: в Clerk есть, в app_users нет → доступ запрещён
   if (userRole.role === 'unauthorized') {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-slate-50">
-        <div className="text-center max-w-md">
-          <i className="fa-solid fa-ban text-6xl text-red-400 mb-6"></i>
-          <h1 className="text-3xl font-black text-slate-900 mb-3">Access Denied</h1>
-          <p className="text-slate-500 font-medium mb-6">
-            Your account (<strong>{user.primaryEmailAddress?.emailAddress}</strong>) is not authorized to use this application.
-            Please contact the administrator.
-          </p>
-          <SignOutButton>
-            <button className="bg-slate-200 text-slate-700 px-6 py-3 rounded-xl font-bold hover:bg-slate-300 transition-all">
-              Sign Out
-            </button>
-          </SignOutButton>
-        </div>
-      </div>
-    );
+    return <AccessDenied email={user.primaryEmailAddress?.emailAddress} />;
   }
 
   const timeSlots = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00"];
