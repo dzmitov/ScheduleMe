@@ -171,8 +171,18 @@ const App: React.FC = () => {
         </div>
       );
     }
-    const filteredSchools = (selectedSchoolId === 'all' ? schools : schools.filter(s => s.id === selectedSchoolId))
-      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));  // ← ДОБАВЛЕНА СОРТИРОВКА
+    // const filteredSchools = (selectedSchoolId === 'all' ? schools : schools.filter(s => s.id === selectedSchoolId))
+    //   .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));  // ← ДОБАВЛЕНА СОРТИРОВКА
+    const dayLessons = lessons.filter(l =>
+      l.date === dateStr &&
+      (selectedTeacherId === 'all' || l.teacherId === selectedTeacherId)
+    );
+    const activeSchoolIds = new Set(dayLessons.map(l => l.schoolId));
+
+    const filteredSchools = (selectedSchoolId === 'all'
+      ? schools.filter(s => activeSchoolIds.has(s.id))  // ← только школы с уроками
+      : schools.filter(s => s.id === selectedSchoolId))
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
     return (
       <div className="bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden flex-1 flex flex-col min-h-0 animate-fadeIn">
         <div className="overflow-auto flex-1 relative custom-scrollbar">
@@ -226,12 +236,6 @@ const App: React.FC = () => {
     );
   };
 
-  // const renderWeeklyTimetable = () => {
-  //   const dayConfigs = weekDays.map(day => {
-  //     const dayDateStr = toLocalDateStr(day);
-  //     const dayLessons = lessons.filter(l => l.date === dayDateStr);
-  //     return { day, lessonCount: dayLessons.length, activeSchools: dayLessons.map(l => l.schoolId).filter((v, i, a) => a.indexOf(v) === i).map(id => schools.find(s => s.id === id)).filter(Boolean) as School[] };
-  //   });
   const renderWeeklyTimetable = () => {
     const dayConfigs = weekDays.map(day => {
       const dayDateStr = toLocalDateStr(day);
