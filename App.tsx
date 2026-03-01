@@ -20,7 +20,6 @@ import SettingsPage from './pages/SettingsPage';
 
 const App: React.FC = () => {
   const { user, isSignedIn, isLoaded } = useUser();
-  // const [view, setView] = useState<ViewType>('dashboard');
   const navigate = useNavigate();       // инструмент для смены URL
   const location = useLocation();       // читаем текущий URL
 
@@ -132,6 +131,24 @@ const App: React.FC = () => {
     if (isMobile) {
       return (
         <div className="flex-1 flex flex-col min-h-0 animate-fadeIn space-y-2">
+          <div className="flex items-center justify-between shrink-0">
+            <div>
+              <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">
+                {day.toLocaleDateString('en-US', { weekday: 'long' })}
+              </p>
+              <p className="text-lg font-black text-slate-900 leading-tight">
+                {day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </p>
+            </div>
+            {isAdmin && (
+              <button
+                onClick={() => openEditModal(undefined, { date: dateStr })}
+                className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[10px] font-black hover:bg-indigo-700 transition-all flex items-center gap-1.5 shadow-lg shadow-indigo-100"
+              >
+                <i className="fa-solid fa-plus"></i> ADD CLASS
+              </button>
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-1.5 shrink-0">
             <div className="flex flex-col gap-0.5">
               <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-1">Branch</label>
@@ -171,8 +188,6 @@ const App: React.FC = () => {
         </div>
       );
     }
-    // const filteredSchools = (selectedSchoolId === 'all' ? schools : schools.filter(s => s.id === selectedSchoolId))
-    //   .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));  // ← ДОБАВЛЕНА СОРТИРОВКА
     const dayLessons = lessons.filter(l =>
       l.date === dateStr &&
       (selectedTeacherId === 'all' || l.teacherId === selectedTeacherId)
@@ -186,7 +201,6 @@ const App: React.FC = () => {
     return (
       <div className="bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden flex-1 flex flex-col min-h-0 animate-fadeIn">
         <div className="overflow-auto flex-1 relative custom-scrollbar">
-          {/* <table className="w-full border-collapse table-fixed min-w-[800px]"> */}
           <table className="border-collapse table-auto w-max">
             <thead>
               <tr className="bg-slate-50">
@@ -279,16 +293,6 @@ const App: React.FC = () => {
           {/* <table className="w-full border-collapse table-fixed min-w-[1200px]"> */}
           <table className="border-collapse table-auto w-max">
             <thead>
-              {/* <tr className="bg-slate-50">
-                <th className="sticky top-0 left-0 z-50 w-16 p-2 text-[9px] font-black text-slate-800 uppercase tracking-widest text-center border-r border-b border-slate-200 bg-slate-50 shadow-[2px_0_0_0_#e2e8f0]">TIME</th>
-                {dayConfigs.map(({ day, activeSchools }) => (
-                  <th key={toLocalDateStr(day)} colSpan={Math.max(1, activeSchools.length)} className="sticky top-0 z-40 p-2 border-l border-b border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors group/header" onClick={() => setFocusedDay(day)}>
-                    <div className="flex flex-col items-center">
-                      <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest group-hover/header:underline">{day.toLocaleDateString('en-US', { weekday: 'long' })}</span>
-                      <span className="text-xs font-bold text-slate-400">{day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                    </div>
-                  </th>
-                ))} */}
               {/* Строка 1: дни недели — как раньше */}
               <tr className="bg-slate-50">
                 <th className="sticky top-0 left-0 z-50 w-16 p-2 text-[9px] font-black text-slate-800 uppercase tracking-widest text-center border-r border-b border-slate-200 bg-slate-50 shadow-[2px_0_0_0_#e2e8f0]" rowSpan={2}>TIME</th>
@@ -368,7 +372,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">
-      <Sidebar currentView={view} isAdmin={isAdmin} /> {/*onViewChange={(v) => { setView(v); setFocusedDay(null); }} />*/}
+      <Sidebar currentView={view} isAdmin={isAdmin} />
       <main className="flex-1 flex flex-col overflow-hidden p-2.5">
         {errors.lessons && (
           <div className="mb-4 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-rose-800 text-sm font-medium">
@@ -412,7 +416,6 @@ const App: React.FC = () => {
                 <div className="flex items-center gap-2">
                   {!focusedDay && !isMobile && (
                     <div className="flex flex-col gap-0.5">
-                      {/* <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-1">Staff</label> */}
                       <select
                         value={selectedTeacherId}
                         onChange={(e) => setSelectedTeacherId(e.target.value)}
