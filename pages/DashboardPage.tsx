@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lesson, Teacher, School } from '../../types';
-import LessonCard from '../LessonCard';
-import { toLocalDateStr } from '../../src/utils/dateUtils';
+import { Lesson, Teacher, School } from '../types';
+import LessonCard from '../components/LessonCard';
+import { toLocalDateStr } from '../src/utils/dateUtils';
 
 interface DashboardPageProps {
   lessons: Lesson[];
