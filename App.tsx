@@ -11,6 +11,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import LoadingScreen from './components/layout/LoadingScreen';
 import AccessDenied from './components/layout/AccessDenied';
 import { toLocalDateStr, getStartOfWeek, getWeekDays } from './src/utils/dateUtils';
+import CopyWeekModal from './components/modals/CopyWeekModal';
+import CopyDayModal from './components/modals/CopyDayModal';
+import LessonModal from './components/modals/LessonModal';
+import UserModal from './components/modals/UserModal';
 
 
 const App: React.FC = () => {
@@ -775,330 +779,116 @@ const App: React.FC = () => {
 
       {/* Duplicate Week Modal */}
       {isCopyWeekModalOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn">
-          <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 lg:p-10 relative">
-            <h2 className="text-2xl font-black text-slate-800 mb-4">Clone Roadmap</h2>
-
-            {/* Блок выбора недели-источника */}
-            <div className="mb-4 p-4 bg-indigo-50 rounded-2xl">
-              <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Copying FROM</p>
-              <p className="text-sm font-bold text-indigo-700">
-                {getStartOfWeek(currentWeekOffset).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                {' — '}
-                {(() => { const e = getStartOfWeek(currentWeekOffset); e.setDate(e.getDate() + 5); return e.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); })()}
-              </p>
-            </div>
-
-            {/* Блок выбора недели-цели */}
-            <div className="mb-6 p-4 bg-slate-50 rounded-2xl">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Copy TO</p>
-              <div className="flex items-center justify-between gap-3">
-                <button
-                  onClick={() => setCopyTargetWeekOffset(prev => prev - 1)}
-                  disabled={copyTargetWeekOffset <= currentWeekOffset + 1}
-                  className="w-9 h-9 flex items-center justify-center bg-white rounded-xl border border-slate-200 hover:border-indigo-400 disabled:opacity-30 transition-all"
-                >
-                  <i className="fa-solid fa-chevron-left text-slate-500 text-xs"></i>
-                </button>
-                <div className="text-center flex-1">
-                  <p className="text-sm font-black text-slate-800">
-                    {getStartOfWeek(copyTargetWeekOffset).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    {' — '}
-                    {(() => { const e = getStartOfWeek(copyTargetWeekOffset); e.setDate(e.getDate() + 5); return e.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); })()}
-                  </p>
-                  <p className="text-[10px] text-slate-400 font-medium mt-0.5">
-                    {copyTargetWeekOffset === currentWeekOffset + 1 ? 'Next week' : `Week +${copyTargetWeekOffset - currentWeekOffset}`}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setCopyTargetWeekOffset(prev => prev + 1)}
-                  className="w-9 h-9 flex items-center justify-center bg-white rounded-xl border border-slate-200 hover:border-indigo-400 transition-all"
-                >
-                  <i className="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
-                </button>
-              </div>
-            </div>
-            <label className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl cursor-pointer border-2 border-transparent hover:border-indigo-100 transition-all mb-8"><input type="checkbox" checked={copyKeepTeachers} onChange={e => setCopyKeepTeachers(e.target.checked)} className="w-6 h-6 rounded-lg text-indigo-600 focus:ring-indigo-500" /><span className="font-bold text-slate-700 text-sm">Transfer staff assignments</span></label>
-            <div className="flex gap-4"><button onClick={() => setIsCopyWeekModalOpen(false)} className="flex-1 px-4 py-4 text-slate-400 font-black hover:bg-slate-50 rounded-2xl text-xs uppercase tracking-widest transition-colors">Cancel</button><button onClick={async () => {
-              try {
-                await lessonActions.copyWeek({
-                  weekDays,
-                  currentWeekOffset,
-                  targetWeekOffset: copyTargetWeekOffset,
-                  keepTeachers: copyKeepTeachers,
-                });
-                setIsCopyWeekModalOpen(false);
-              } catch (err) {
-                alert(err instanceof Error ? err.message : 'Failed to clone week');
-              }
-            }} className="flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all text-xs uppercase tracking-widest">Duplicate</button></div>
-          </div>
-        </div>
+        <CopyWeekModal
+          currentWeekOffset={currentWeekOffset}
+          copyTargetWeekOffset={copyTargetWeekOffset}
+          copyKeepTeachers={copyKeepTeachers}
+          onTargetOffsetChange={setCopyTargetWeekOffset}
+          onKeepTeachersChange={setCopyKeepTeachers}
+          onClose={() => setIsCopyWeekModalOpen(false)}
+          onConfirm={async () => {
+            try {
+              await lessonActions.copyWeek({
+                weekDays,
+                currentWeekOffset,
+                targetWeekOffset: copyTargetWeekOffset,
+                keepTeachers: copyKeepTeachers,
+              });
+              setIsCopyWeekModalOpen(false);
+            } catch (err) {
+              alert(err instanceof Error ? err.message : 'Failed to clone week');
+            }
+          }}
+        />
       )}
       {/* Clone Day Modal */}
       {isCopyDayModalOpen && focusedDay && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn">
-          <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 lg:p-10 relative">
-            <h2 className="text-2xl font-black text-slate-800 mb-4">Clone Day</h2>
-
-            {/* Источник — текущий день (аналог "Copying FROM" в Clone Week) */}
-            <div className="mb-4 p-4 bg-indigo-50 rounded-2xl">
-              <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Copying FROM</p>
-              <p className="text-sm font-bold text-indigo-700">
-                {focusedDay.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-              </p>
-              <p className="text-[10px] text-indigo-400 mt-1">
-                {lessons.filter(l => l.date === toLocalDateStr(focusedDay)).length} session(s)
-              </p>
-            </div>
-
-            {/* Цель — выбор даты через input type="date" */}
-            <div className="mb-6 p-4 bg-slate-50 rounded-2xl">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Copy TO</p>
-              <input
-                type="date"
-                value={copyDayTargetDate}
-                min={toLocalDateStr(new Date())}
-                onChange={(e) => setCopyDayTargetDate(e.target.value)}
-                className="w-full bg-white border-2 border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition-all"
-              />
-            </div>
-
-            {/* Сохранить учителей — тот же чекбокс что в Clone Week */}
-            <label className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl cursor-pointer border-2 border-transparent hover:border-indigo-100 transition-all mb-8">
-              <input
-                type="checkbox"
-                checked={copyKeepTeachers}
-                onChange={e => setCopyKeepTeachers(e.target.checked)}
-                className="w-6 h-6 rounded-lg text-indigo-600 focus:ring-indigo-500"
-              />
-              <span className="font-bold text-slate-700 text-sm">Transfer staff assignments</span>
-            </label>
-
-            <div className="flex gap-4">
-              <button
-                onClick={() => setIsCopyDayModalOpen(false)}
-                className="flex-1 px-4 py-4 text-slate-400 font-black hover:bg-slate-50 rounded-2xl text-xs uppercase tracking-widest transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    await lessonActions.copyDay({
-                      sourceDate: toLocalDateStr(focusedDay!),
-                      targetDate: copyDayTargetDate,
-                      keepTeachers: copyKeepTeachers,
-                    });
-                    setIsCopyDayModalOpen(false);
-                  } catch (err) {
-                    alert(err instanceof Error ? err.message : 'Failed to clone day');
-                  }
-                }}
-                className="flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all text-xs uppercase tracking-widest"
-              >
-                Duplicate
-              </button>
-            </div>
-          </div>
-        </div>
+        <CopyDayModal
+          focusedDay={focusedDay}
+          copyDayTargetDate={copyDayTargetDate}
+          copyKeepTeachers={copyKeepTeachers}
+          onTargetDateChange={setCopyDayTargetDate}
+          onKeepTeachersChange={setCopyKeepTeachers}
+          onClose={() => setIsCopyDayModalOpen(false)}
+          onConfirm={async () => {
+            try {
+              await lessonActions.copyDay({
+                sourceDate: toLocalDateStr(focusedDay),
+                targetDate: copyDayTargetDate,
+                keepTeachers: copyKeepTeachers,
+              });
+              setIsCopyDayModalOpen(false);
+            } catch (err) {
+              alert(err instanceof Error ? err.message : 'Failed to clone day');
+            }
+          }}
+        />
       )}
       {/* Edit Session Modal */}
       {isModalOpen && editingLesson && (
-        <div className="fixed inset-0 z-[210] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn">
-          <div className="bg-white w-full max-w-2xl rounded-[3rem] lg:rounded-[3.5rem] shadow-2xl p-6 lg:p-10 relative overflow-hidden max-h-[95vh] overflow-y-auto custom-scrollbar">
-            <div className="flex justify-between items-center mb-8 lg:mb-10">
-              <h2 className="text-2xl lg:text-3xl font-black text-slate-800 tracking-tight">{editingLesson.id && lessons.some(l => l.id === editingLesson.id) ? 'Edit Record' : 'New Class'}</h2>
-              <button onClick={() => { setIsModalOpen(false); setEditingLesson(null); }} className="w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center transition-all"><i className="fa-solid fa-xmark text-slate-400 text-xl"></i></button>
-            </div>
-
-            {/* Form is separate from actions to prevent validation conflicts */}
-            <form id="lesson-form" onSubmit={async (e) => {
-              e.preventDefault();
-              if (!editingLesson || !isAdmin) return;
-              try {
-                await lessonActions.save(editingLesson, lessons);
-                setIsModalOpen(false);
-                setEditingLesson(null);
-              } catch (err) {
-                alert(err instanceof Error ? err.message : 'Failed to save lesson');
-              }
-            }} className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-              <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Faculty Member</label>
-                <select required value={editingLesson.teacherId} onChange={e => setEditingLesson({ ...editingLesson, teacherId: e.target.value })} className="w-full bg-slate-50 border-none rounded-xl lg:rounded-2xl px-5 lg:px-6 py-3 lg:py-4 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 text-sm"><option value="">Select Personnel</option>{teachers.map(t => <option key={t.id} value={t.id}>{t.firstName} {t.lastName}</option>)}</select>
-              </div>
-              <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Institution / Branch</label>
-                <select required value={editingLesson.schoolId} onChange={e => setEditingLesson({ ...editingLesson, schoolId: e.target.value })} className="w-full bg-slate-50 border-none rounded-xl lg:rounded-2xl px-5 lg:px-6 py-3 lg:py-4 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 text-sm"><option value="">Select School</option>{schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
-              </div>
-              <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Grade / Level</label><input value={editingLesson.grade} onChange={e => setEditingLesson({ ...editingLesson, grade: e.target.value })} className="w-full bg-slate-50 border-none rounded-xl lg:rounded-2xl px-5 lg:px-6 py-3 lg:py-4 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 text-sm" placeholder="e.g. Grade 10-A" /></div>
-              <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Date</label><input required type="date" value={editingLesson.date} onChange={e => setEditingLesson({ ...editingLesson, date: e.target.value })} className="w-full bg-slate-50 border-none rounded-xl lg:rounded-2xl px-5 lg:px-6 py-3 lg:py-4 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 text-sm" /></div>
-              <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Room Assignment</label><input value={editingLesson.room} onChange={e => setEditingLesson({ ...editingLesson, room: e.target.value })} className="w-full bg-slate-50 border-none rounded-xl lg:rounded-2xl px-5 lg:px-6 py-3 lg:py-4 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 text-sm" placeholder="e.g. Room 302" /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Start Time</label><input required type="time" step="300" value={editingLesson.startTime} onChange={e => { const ns = e.target.value; setEditingLesson({ ...editingLesson, startTime: ns, endTime: addMinutes(ns, 45) }); }} className="w-full bg-slate-50 border-none rounded-xl lg:rounded-2xl px-4 py-3 lg:py-4 font-black text-sm" /></div>
-                <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">End Time</label><input required type="time" step="300" value={editingLesson.endTime} onChange={e => setEditingLesson({ ...editingLesson, endTime: e.target.value })} className="w-full bg-slate-50 border-none rounded-xl lg:rounded-2xl px-4 py-3 lg:py-4 font-black text-sm" /></div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                  Corrected Lesson Duration (min)
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="480"
-                  placeholder="e.g. 60"
-                  value={editingLesson.correctedDuration ?? ''}
-                  onChange={e =>
-                    setEditingLesson({
-                      ...editingLesson,
-                      correctedDuration: e.target.value !== '' ? Number(e.target.value) : undefined,
-                    })
-                  }
-                  className="w-full bg-slate-50 border-none rounded-xl lg:rounded-2xl px-5 lg:px-6 py-3 lg:py-4 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 text-sm"
-                />
-              </div>
-              <div className="md:col-span-2 space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mission Notes / Topics</label><textarea rows={2} value={editingLesson.notes} onChange={e => setEditingLesson({ ...editingLesson, notes: e.target.value })} className="w-full bg-slate-50 border-none rounded-xl lg:rounded-2xl px-6 py-4 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 resize-none text-sm" placeholder="Additional details..."></textarea></div>
-            </form>
-
-            {/* Action Buttons are OUTSIDE the form element to ensure strict separation of concerns */}
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 lg:gap-6 mt-4 lg:mt-8">
-              {editingLesson?.id && lessons.some(l => l.id === editingLesson.id) ? (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (!isAdmin || !editingLesson?.id) return;
-                    if (!window.confirm('Delete this lesson? This cannot be undone.')) return;
-                    try {
-                      await lessonActions.remove(editingLesson.id);
-                      setIsModalOpen(false);
-                      setEditingLesson(null);
-                    } catch (err) {
-                      alert(err instanceof Error ? err.message : 'Failed to delete lesson');
-                    }
-                  }}
-                  className="w-full sm:w-auto text-rose-500 font-black hover:bg-rose-50 px-8 py-4 rounded-2xl lg:rounded-3xl transition-all text-xs uppercase tracking-widest border border-transparent hover:border-rose-100"
-                >
-                  Delete Record
-                </button>
-              ) : <div className="hidden sm:block"></div>}
-
-              <button
-                type="submit"
-                form="lesson-form"
-                className="w-full sm:flex-1 bg-indigo-600 text-white font-black py-4 lg:py-5 rounded-2xl lg:rounded-[2rem] shadow-2xl shadow-indigo-100 hover:scale-[1.02] transition-all text-xs uppercase tracking-widest"
-              >
-                Update Schedule
-              </button>
-            </div>
-
-          </div>
-        </div>
+        <LessonModal
+          lesson={editingLesson}
+          lessons={lessons}
+          teachers={teachers}
+          schools={schools}
+          addMinutes={addMinutes}
+          onChange={setEditingLesson}
+          onClose={() => { setIsModalOpen(false); setEditingLesson(null); }}
+          onSave={async (e) => {
+            e.preventDefault();
+            if (!editingLesson || !isAdmin) return;
+            try {
+              await lessonActions.save(editingLesson, lessons);
+              setIsModalOpen(false);
+              setEditingLesson(null);
+            } catch (err) {
+              alert(err instanceof Error ? err.message : 'Failed to save lesson');
+            }
+          }}
+          onDelete={async () => {
+            if (!isAdmin || !editingLesson?.id) return;
+            if (!window.confirm('Delete this lesson? This cannot be undone.')) return;
+            try {
+              await lessonActions.remove(editingLesson.id);
+              setIsModalOpen(false);
+              setEditingLesson(null);
+            } catch (err) {
+              alert(err instanceof Error ? err.message : 'Failed to delete lesson');
+            }
+          }}
+        />
       )}
 
       {/* User Edit Modal */}
       {isUserModalOpen && editingUser && (
-        <div className="fixed inset-0 z-[210] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn">
-          <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl p-6 lg:p-8 relative">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-black text-slate-800 tracking-tight">
-                {editingUser.id && users.some(u => u.id === editingUser.id) ? 'Edit User' : 'New User'}
-              </h2>
-              <button
-                onClick={() => {
-                  setIsUserModalOpen(false);
-                  setEditingUser(null);
-                }}
-                className="w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center transition-all"
-              >
-                <i className="fa-solid fa-xmark text-slate-400 text-xl"></i>
-              </button>
-            </div>
-
-            <form
-              id="user-form"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                if (!editingUser || !isAdmin) return;
-                try {
-                  await userActions.save(editingUser, users);
-                  setIsUserModalOpen(false);
-                  setEditingUser(null);
-                } catch (err) {
-                  alert(err instanceof Error ? err.message : 'Failed to save user');
-                }
-              }}
-              className="space-y-6"
-            >
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
-                <input
-                  type="email"
-                  required
-                  value={editingUser.email}
-                  onChange={e => setEditingUser({ ...editingUser, email: e.target.value })}
-                  className="w-full bg-slate-50 border-none rounded-xl px-5 py-3 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 text-sm"
-                  placeholder="user@example.com"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Role</label>
-                <select
-                  required
-                  value={editingUser.role}
-                  onChange={e => setEditingUser({ ...editingUser, role: e.target.value as AppUser['role'] })}
-                  className="w-full bg-slate-50 border-none rounded-xl px-5 py-3 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 text-sm"
-                >
-                  <option value="admin">Administrator</option>
-                  <option value="teacher">Teacher</option>
-                  <option value="viewer">Viewer</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Linked Teacher (Optional)</label>
-                <select
-                  value={editingUser.teacherId || ''}
-                  onChange={e => setEditingUser({ ...editingUser, teacherId: e.target.value || undefined })}
-                  className="w-full bg-slate-50 border-none rounded-xl px-5 py-3 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 text-sm"
-                >
-                  <option value="">No Teacher Link</option>
-                  {teachers.map(t => (
-                    <option key={t.id} value={t.id}>{t.firstName} {t.lastName}</option>
-                  ))}
-                </select>
-                <p className="text-xs text-slate-500 ml-1 mt-1">Link to a teacher account for calendar access</p>
-              </div>
-
-              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-8">
-                {editingUser.id && users.some(u => u.id === editingUser.id) ? (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (!editingUser.id || !window.confirm('Are you sure you want to delete this user?')) return;
-                      try {
-                        await userActions.remove(editingUser.id);
-                        setIsUserModalOpen(false);
-                        setEditingUser(null);
-                      } catch (err) {
-                        alert(err instanceof Error ? err.message : 'Failed to delete user');
-                      }
-                    }}
-                    className="w-full sm:w-auto text-rose-500 font-black hover:bg-rose-50 px-6 py-3 rounded-xl transition-all text-xs uppercase tracking-widest border border-transparent hover:border-rose-100"
-                  >
-                    Delete User
-                  </button>
-                ) : <div className="hidden sm:block"></div>}
-
-                <button
-                  type="submit"
-                  className="w-full sm:flex-1 bg-indigo-600 text-white font-black py-3 rounded-xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all text-xs uppercase tracking-widest"
-                >
-                  Save User
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <UserModal
+          user={editingUser}
+          users={users}
+          teachers={teachers}
+          onChange={setEditingUser}
+          onClose={() => { setIsUserModalOpen(false); setEditingUser(null); }}
+          onSave={async (e) => {
+            e.preventDefault();
+            if (!editingUser || !isAdmin) return;
+            try {
+              await userActions.save(editingUser, users);
+              setIsUserModalOpen(false);
+              setEditingUser(null);
+            } catch (err) {
+              alert(err instanceof Error ? err.message : 'Failed to save user');
+            }
+          }}
+          onDelete={async () => {
+            if (!editingUser.id || !window.confirm('Are you sure you want to delete this user?')) return;
+            try {
+              await userActions.remove(editingUser.id);
+              setIsUserModalOpen(false);
+              setEditingUser(null);
+            } catch (err) {
+              alert(err instanceof Error ? err.message : 'Failed to delete user');
+            }
+          }}
+        />
       )}
       <style>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
@@ -1117,5 +907,4 @@ const App: React.FC = () => {
     </div>
   );
 };
-
 export default App;
