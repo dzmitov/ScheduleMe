@@ -5,28 +5,11 @@ import Sidebar from './components/Sidebar';
 import LessonCard from './components/LessonCard';
 import TeacherHoursReport from './components/TeacherHoursReport';
 import { Lesson, LessonStatus, ViewType, Teacher, School, AppUser } from './types';
-import {
-  fetchLessons,
-  addLesson,
-  updateLesson,
-  deleteLesson,
-  fetchTeachers,
-  addTeacher,
-  updateTeacher,
-  deleteTeacher,
-  fetchSchools,
-  addSchool,
-  updateSchool,
-  deleteSchool,
-  fetchUsers,
-  addUser,
-  updateUser,
-  deleteUser,
-  checkUserRole,
-} from './src/services/dbService';
+import { useUserRole } from './src/hooks/useUserRole';
+import { useAppData } from './src/hooks/useAppData';
 import { useNavigate, useLocation } from 'react-router-dom';
-import LoadingScreen  from './components/layout/LoadingScreen';
-import AccessDenied   from './components/layout/AccessDenied';
+import LoadingScreen from './components/layout/LoadingScreen';
+import AccessDenied from './components/layout/AccessDenied';
 import { toLocalDateStr, getStartOfWeek, getWeekDays } from './src/utils/dateUtils';
 
 
@@ -39,10 +22,6 @@ const App: React.FC = () => {
   const view = (location.pathname.slice(1) || 'dashboard') as ViewType;
   const setView = (v: ViewType) => navigate(`/${v}`);
 
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [schools, setSchools] = useState<School[]>([]);
-  const [lessons, setLessons] = useState<Lesson[]>([]);
-  const [users, setUsers] = useState<AppUser[]>([]);
   const [openSettingsSections, setOpenSettingsSections] = useState<Record<string, boolean>>({
     faculty: false,
     schools: false,
@@ -50,11 +29,6 @@ const App: React.FC = () => {
   });
   const toggleSettingsSection = (key: string) =>
     setOpenSettingsSections(prev => ({ ...prev, [key]: !prev[key] }));
-  const [dataLoading, setDataLoading] = useState(true);
-  const [lessonsError, setLessonsError] = useState<string | null>(null);
-  const [teachersError, setTeachersError] = useState<string | null>(null);
-  const [schoolsError, setSchoolsError] = useState<string | null>(null);
-  const [usersError, setUsersError] = useState<string | null>(null);
 
   const [aiAdvice, setAiAdvice] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -69,14 +43,8 @@ const App: React.FC = () => {
   const [editingLesson, setEditingLesson] = useState<Partial<Lesson> | null>(null);
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-  // const [columnScale, setColumnScale] = useState<number>(1);
-  const [userRole, setUserRole] = useState<{ isAdmin: boolean; role: string; teacherId?: string; userId?: string } | null>(null);
   const [editingUser, setEditingUser] = useState<Partial<AppUser> | null>(null);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
-  const [dashboardTeacherFilter, setDashboardTeacherFilter] = useState<string>('all');
-
-  // Admin check using the database
-  const isAdmin = userRole?.isAdmin || false;
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
@@ -84,52 +52,15 @@ const App: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Check user role when signed in
-  useEffect(() => {
-    if (isSignedIn && user?.primaryEmailAddress?.emailAddress) {
-      const email = user.primaryEmailAddress.emailAddress;
+  const { userRole, isAdmin, defaultTeacherFilter } = useUserRole();
+  const [dashboardTeacherFilter, setDashboardTeacherFilter] = useState<string>(defaultTeacherFilter);
 
-      // Add debugger for role verification
-      debugger;
-
-      checkUserRole(email)
-        .then(role => {
-          console.log('User role:', role); // For debugging
-          setUserRole(role);
-          if (role.role === 'teacher' && role.teacherId) {
-            setDashboardTeacherFilter(role.teacherId);
-          }
-        })
-        .catch(err => {
-          console.error('Error checking user role:', err);
-          setUserRole({ isAdmin: false, role: 'viewer' });
-        });
-    }
-  }, [isSignedIn, user]);
-
-  // Load application data
-  useEffect(() => {
-    Promise.all([
-      fetchLessons()
-        .then(setLessons)
-        .catch((err) => setLessonsError(err instanceof Error ? err.message : 'Failed to load lessons')),
-      fetchTeachers()
-        .then(setTeachers)
-        .catch((err) => setTeachersError(err instanceof Error ? err.message : 'Failed to load teachers')),
-      fetchSchools()
-        .then(setSchools)
-        .catch((err) => setSchoolsError(err instanceof Error ? err.message : 'Failed to load schools')),
-      fetchUsers()
-        .then(setUsers)
-        .catch((err) => setUsersError(err instanceof Error ? err.message : 'Failed to load users')),
-    ]).finally(() => setDataLoading(false));
-  }, []);
-
-  /*   useEffect(() => {
-      if (user && lessons.length > 0) {
-        getScheduleAdvice(lessons).then(setAiAdvice).catch(console.error);
-      }
-    }, [user]); */
+  const {
+    lessons, teachers, schools, users,
+    setLessons, setTeachers, setSchools, setUsers,
+    isLoading, errors,
+    lessonActions, teacherActions, schoolActions, userActions,
+  } = useAppData();
 
   const stats = useMemo(() => ({ total: lessons.length }), [lessons]);
 
@@ -139,7 +70,7 @@ const App: React.FC = () => {
     const filtered = [...lessons]
       .filter(l => {
         if (l.date < todayStr) return false; // только сегодня и будущее
-        if (dashboardTeacherFilter !== 'all' && l.teacherId !== dashboardTeacherFilter) return false;
+        if (defaultTeacherFilter !== 'all' && l.teacherId !== defaultTeacherFilter) return false;
         return true;
       })
       .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
@@ -156,7 +87,7 @@ const App: React.FC = () => {
       }
     }
     return groups;
-  }, [lessons, dashboardTeacherFilter]);
+  }, [lessons, defaultTeacherFilter]);
 
   const weekDays = useMemo(() => getWeekDays(currentWeekOffset), [currentWeekOffset]);
 
@@ -195,199 +126,6 @@ const App: React.FC = () => {
       ...initialData
     });
     setIsModalOpen(true);
-  };
-
-  const handleSaveLesson = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingLesson || !isAdmin) return;
-    let finalSchoolId = editingLesson.schoolId || (schools.length > 0 ? schools[0].id : '');
-    const l = { ...editingLesson, schoolId: finalSchoolId, subject: 'English', status: LessonStatus.UPCOMING } as Lesson;
-    const isUpdate = lessons.some((item) => item.id === l.id);
-    try {
-      if (isUpdate) {
-        await updateLesson(l);
-      } else {
-        await addLesson(l);
-      }
-      setLessons((prev) => {
-        const idx = prev.findIndex((item) => item.id === l.id);
-        if (idx !== -1) {
-          const next = [...prev];
-          next[idx] = l;
-          return next;
-        }
-        return [...prev, l];
-      });
-      setIsModalOpen(false);
-      setEditingLesson(null);
-    } catch (err) {
-      console.error(err);
-      alert(err instanceof Error ? err.message : 'Failed to save lesson');
-    }
-  };
-
-  // ROBUST DELETE LOGIC
-  const handleDeleteCurrentLesson = async () => {
-    if (!isAdmin || !editingLesson?.id) return;
-
-    // Check if it's a real lesson that exists in state
-    const exists = lessons.some(l => l.id === editingLesson.id);
-    if (!exists) return;
-
-    const confirmMessage = "Are you sure you want to permanently delete this lesson? This action cannot be undone.";
-    if (window.confirm(confirmMessage)) {
-      const idToDelete = editingLesson.id;
-      try {
-        await deleteLesson(idToDelete);
-        setLessons((currentLessons) => currentLessons.filter((lesson) => lesson.id !== idToDelete));
-        setIsModalOpen(false);
-        setEditingLesson(null);
-      } catch (err) {
-        console.error(err);
-        alert(err instanceof Error ? err.message : 'Failed to delete lesson');
-      }
-    }
-  };
-
-  const handleCopyWeek = async () => {
-    if (!isAdmin) return;
-    const dayStrings = weekDays.map((d) => toLocalDateStr(d));
-    const currentWeekLessons = lessons.filter((l) => dayStrings.includes(l.date));
-    if (currentWeekLessons.length === 0) {
-      alert('No Classes found to duplicate.');
-      return;
-    }
-    const targetWeekStart = getStartOfWeek(copyTargetWeekOffset);
-    const sourceWeekStart = getStartOfWeek(currentWeekOffset);
-    const diffDays = Math.round((targetWeekStart.getTime() - sourceWeekStart.getTime()) / (1000 * 60 * 60 * 24));
-
-    const newLessons = currentWeekLessons.map((l) => {
-      const d = new Date(l.date);
-      d.setDate(d.getDate() + diffDays);
-      return {
-        ...l,
-        id: Math.random().toString(36).substr(2, 9),
-        date: toLocalDateStr(d),
-        teacherId: copyKeepTeachers ? l.teacherId : '',
-        status: LessonStatus.UPCOMING,
-      };
-    });
-    try {
-      await Promise.all(newLessons.map((lesson) => addLesson(lesson)));
-      setLessons((prev) => [...prev, ...newLessons]);
-      setIsCopyWeekModalOpen(false);
-      alert(`Successfully cloned ${newLessons.length} sessions.`);
-    } catch (err) {
-      console.error(err);
-      alert(err instanceof Error ? err.message : 'Failed to clone week');
-    }
-  };
-
-  const handleCopyDay = async () => {
-    if (!isAdmin || !focusedDay) return;
-
-    const sourceDateStr = toLocalDateStr(focusedDay);
-    const dayLessons = lessons.filter((l) => l.date === sourceDateStr);
-
-    if (dayLessons.length === 0) {
-      alert('No classes found for this day.');
-      return;
-    }
-    if (!copyDayTargetDate || copyDayTargetDate === sourceDateStr) {
-      alert('Please select a different target date.');
-      return;
-    }
-
-    const newLessons = dayLessons.map((l) => ({
-      ...l,
-      id: Math.random().toString(36).substr(2, 9),
-      date: copyDayTargetDate,
-      teacherId: copyKeepTeachers ? l.teacherId : '',
-      status: LessonStatus.UPCOMING,
-    }));
-
-    try {
-      await Promise.all(newLessons.map((lesson) => addLesson(lesson)));
-      setLessons((prev) => [...prev, ...newLessons]);
-      setIsCopyDayModalOpen(false);
-      alert(`Successfully cloned ${newLessons.length} session(s) to ${copyDayTargetDate}.`);
-    } catch (err) {
-      console.error(err);
-      alert(err instanceof Error ? err.message : 'Failed to clone day');
-    }
-  };
-
-  const handleAddTeacher = async () => {
-    const newTeacher: Teacher = {
-      id: Math.random().toString(36).substr(2, 9),
-      firstName: 'New',
-      lastName: 'Staff',
-      color: '#6366f1',
-    };
-    try {
-      const saved = await addTeacher(newTeacher);
-      setTeachers((prev) => [...prev, saved]);
-    } catch (err) {
-      console.error(err);
-      alert(err instanceof Error ? err.message : 'Failed to add teacher');
-    }
-  };
-
-  const handleTeacherBlur = async (id: string) => {
-    const teacher = teachers.find((x) => x.id === id);
-    if (!teacher) return;
-    try {
-      await updateTeacher(teacher);
-    } catch (err) {
-      console.error(err);
-      alert(err instanceof Error ? err.message : 'Failed to save teacher');
-    }
-  };
-
-  const handleDeleteTeacher = async (id: string) => {
-    try {
-      await deleteTeacher(id);
-      setTeachers((prev) => prev.filter((t) => t.id !== id));
-    } catch (err) {
-      console.error(err);
-      alert(err instanceof Error ? err.message : 'Failed to delete teacher');
-    }
-  };
-
-  const handleAddSchool = async () => {
-    const newSchool: School = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: 'New Unit',
-      sortOrder: 0,
-    };
-    try {
-      const saved = await addSchool(newSchool);
-      setSchools((prev) => [...prev, saved]);
-    } catch (err) {
-      console.error(err);
-      alert(err instanceof Error ? err.message : 'Failed to add school');
-    }
-  };
-
-  const handleSchoolBlur = async (id: string) => {
-    const school = schools.find((x) => x.id === id);
-    if (!school) return;
-    try {
-      await updateSchool(school);
-    } catch (err) {
-      console.error(err);
-      alert(err instanceof Error ? err.message : 'Failed to save school');
-    }
-  };
-
-  const handleDeleteSchool = async (id: string) => {
-    try {
-      await deleteSchool(id);
-      setSchools((prev) => prev.filter((s) => s.id !== id));
-    } catch (err) {
-      console.error(err);
-      alert(err instanceof Error ? err.message : 'Failed to delete school');
-    }
   };
 
   // Show loading state while Clerk is initializing
@@ -658,22 +396,22 @@ const App: React.FC = () => {
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">
       <Sidebar currentView={view} isAdmin={isAdmin} /> {/*onViewChange={(v) => { setView(v); setFocusedDay(null); }} />*/}
       <main className="flex-1 flex flex-col overflow-hidden p-2.5">
-        {lessonsError && (
+        {errors.lessons && (
           <div className="mb-4 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-rose-800 text-sm font-medium">
-            Lessons: {lessonsError}
+            Lessons: {errors.lessons}
           </div>
         )}
-        {teachersError && (
+        {errors.teachers && (
           <div className="mb-4 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-rose-800 text-sm font-medium">
-            Teachers: {teachersError}
+            Teachers: {errors.teachers}
           </div>
         )}
-        {schoolsError && (
+        {errors.schools && (
           <div className="mb-4 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-rose-800 text-sm font-medium">
-            Schools: {schoolsError}
+            Schools: {errors.schools}
           </div>
         )}
-        {dataLoading && !lessonsError && !teachersError && !schoolsError && (
+        {isLoading && !errors.lessons && !errors.teachers && !errors.schools && (
           <p className="text-slate-500 text-sm font-medium mb-2">Loading...</p>
         )}
         {view === 'dashboard' && (
@@ -694,7 +432,7 @@ const App: React.FC = () => {
                   <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-2xl px-4 py-2 shadow-sm">
                     <i className="fa-solid fa-chalkboard-user text-indigo-400 text-sm"></i>
                     <select
-                      value={dashboardTeacherFilter}
+                      value={defaultTeacherFilter}
                       onChange={e => setDashboardTeacherFilter(e.target.value)}
                       className="text-sm font-bold text-slate-700 bg-transparent border-none outline-none cursor-pointer pr-1"
                     >
@@ -892,28 +630,28 @@ const App: React.FC = () => {
                 icon: 'fa-chalkboard-user',
                 label: 'Faculty',
                 badge: teachers.length,
-                action: <button onClick={handleAddTeacher} className="text-indigo-600 text-[10px] font-black hover:underline uppercase tracking-widest">+ STAFF</button>,
+                action: <button onClick={() => teacherActions.add()} className="text-indigo-600 text-[10px] font-black hover:underline uppercase tracking-widest">+ STAFF</button>,
                 content: (
                   <div className="divide-y divide-slate-50">
                     {teachers.map(t => (
                       <div key={t.id} className="p-4 lg:p-5 flex items-center gap-4 hover:bg-slate-50/50 transition-colors">
                         <input type="color" value={t.color}
                           onChange={e => setTeachers(prev => prev.map(item => item.id === t.id ? { ...item, color: e.target.value } : item))}
-                          onBlur={() => handleTeacherBlur(t.id)}
+                          onBlur={() => teacherActions.update(t)}
                           className="w-8 h-8 rounded-lg border-none cursor-pointer" />
                         <div className="flex-1 grid grid-cols-2 gap-3">
                           <input value={t.firstName}
                             onChange={e => setTeachers(prev => prev.map(item => item.id === t.id ? { ...item, firstName: e.target.value } : item))}
-                            onBlur={() => handleTeacherBlur(t.id)}
+                            onBlur={() => teacherActions.update(t)}
                             className="bg-slate-50 border-none rounded-xl px-4 py-2 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
                             placeholder="First name" />
                           <input value={t.lastName}
                             onChange={e => setTeachers(prev => prev.map(item => item.id === t.id ? { ...item, lastName: e.target.value } : item))}
-                            onBlur={() => handleTeacherBlur(t.id)}
+                            onBlur={() => teacherActions.update(t)}
                             className="bg-slate-50 border-none rounded-xl px-4 py-2 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
                             placeholder="Last name" />
                         </div>
-                        <button onClick={() => handleDeleteTeacher(t.id)} className="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center text-slate-300 hover:text-red-400 transition-colors">
+                        <button onClick={() => teacherActions.remove(t.id)} className="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center text-slate-300 hover:text-red-400 transition-colors">
                           <i className="fa-solid fa-trash-can text-sm"></i>
                         </button>
                       </div>
@@ -926,7 +664,7 @@ const App: React.FC = () => {
                 icon: 'fa-school',
                 label: 'Schools',
                 badge: schools.length,
-                action: <button onClick={handleAddSchool} className="text-indigo-600 text-[10px] font-black hover:underline uppercase tracking-widest">+ SCHOOL</button>,
+                action: <button onClick={() => schoolActions.add()} className="text-indigo-600 text-[10px] font-black hover:underline uppercase tracking-widest">+ SCHOOL</button>,
                 content: (
                   <div className="divide-y divide-slate-50">
                     {schools.map(s => (
@@ -934,12 +672,12 @@ const App: React.FC = () => {
                         <div className="flex-1 space-y-2">
                           <input value={s.name}
                             onChange={e => setSchools(prev => prev.map(item => item.id === s.id ? { ...item, name: e.target.value } : item))}
-                            onBlur={() => handleSchoolBlur(s.id)}
+                            onBlur={() => schoolActions.update(s)}
                             className="w-full bg-slate-50 border-none rounded-xl px-4 py-2 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
                             placeholder="School name" />
                           <input value={s.address || ''}
                             onChange={e => setSchools(prev => prev.map(item => item.id === s.id ? { ...item, address: e.target.value } : item))}
-                            onBlur={() => handleSchoolBlur(s.id)}
+                            onBlur={() => schoolActions.update(s)}
                             className="w-full bg-slate-50 border-none rounded-xl px-4 py-2 text-xs text-slate-500 outline-none focus:ring-2 focus:ring-indigo-500"
                             placeholder="Address (optional)" />
                         </div>
@@ -947,10 +685,10 @@ const App: React.FC = () => {
                           <span className="text-[9px] text-slate-400 font-bold uppercase">Order</span>
                           <input type="number" value={s.sortOrder ?? 0}
                             onChange={e => setSchools(prev => prev.map(item => item.id === s.id ? { ...item, sortOrder: parseInt(e.target.value) || 0 } : item))}
-                            onBlur={() => handleSchoolBlur(s.id)}
+                            onBlur={() => schoolActions.update(s)}
                             className="w-16 bg-slate-50 border-none rounded-lg px-2 py-2 text-sm font-bold text-slate-700 outline-none text-center" />
                         </div>
-                        <button onClick={() => handleDeleteSchool(s.id)} className="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center text-slate-300 hover:text-red-400 transition-colors">
+                        <button onClick={() => schoolActions.remove(s.id)} className="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center text-slate-300 hover:text-red-400 transition-colors">
                           <i className="fa-solid fa-trash-can text-sm"></i>
                         </button>
                       </div>
@@ -1081,7 +819,19 @@ const App: React.FC = () => {
               </div>
             </div>
             <label className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl cursor-pointer border-2 border-transparent hover:border-indigo-100 transition-all mb-8"><input type="checkbox" checked={copyKeepTeachers} onChange={e => setCopyKeepTeachers(e.target.checked)} className="w-6 h-6 rounded-lg text-indigo-600 focus:ring-indigo-500" /><span className="font-bold text-slate-700 text-sm">Transfer staff assignments</span></label>
-            <div className="flex gap-4"><button onClick={() => setIsCopyWeekModalOpen(false)} className="flex-1 px-4 py-4 text-slate-400 font-black hover:bg-slate-50 rounded-2xl text-xs uppercase tracking-widest transition-colors">Cancel</button><button onClick={handleCopyWeek} className="flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all text-xs uppercase tracking-widest">Duplicate</button></div>
+            <div className="flex gap-4"><button onClick={() => setIsCopyWeekModalOpen(false)} className="flex-1 px-4 py-4 text-slate-400 font-black hover:bg-slate-50 rounded-2xl text-xs uppercase tracking-widest transition-colors">Cancel</button><button onClick={async () => {
+              try {
+                await lessonActions.copyWeek({
+                  weekDays,
+                  currentWeekOffset,
+                  targetWeekOffset: copyTargetWeekOffset,
+                  keepTeachers: copyKeepTeachers,
+                });
+                setIsCopyWeekModalOpen(false);
+              } catch (err) {
+                alert(err instanceof Error ? err.message : 'Failed to clone week');
+              }
+            }} className="flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all text-xs uppercase tracking-widest">Duplicate</button></div>
           </div>
         </div>
       )}
@@ -1133,7 +883,18 @@ const App: React.FC = () => {
                 Cancel
               </button>
               <button
-                onClick={handleCopyDay}
+                onClick={async () => {
+                  try {
+                    await lessonActions.copyDay({
+                      sourceDate: toLocalDateStr(focusedDay!),
+                      targetDate: copyDayTargetDate,
+                      keepTeachers: copyKeepTeachers,
+                    });
+                    setIsCopyDayModalOpen(false);
+                  } catch (err) {
+                    alert(err instanceof Error ? err.message : 'Failed to clone day');
+                  }
+                }}
                 className="flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all text-xs uppercase tracking-widest"
               >
                 Duplicate
@@ -1152,7 +913,17 @@ const App: React.FC = () => {
             </div>
 
             {/* Form is separate from actions to prevent validation conflicts */}
-            <form id="lesson-form" onSubmit={handleSaveLesson} className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+            <form id="lesson-form" onSubmit={async (e) => {
+              e.preventDefault();
+              if (!editingLesson || !isAdmin) return;
+              try {
+                await lessonActions.save(editingLesson, lessons);
+                setIsModalOpen(false);
+                setEditingLesson(null);
+              } catch (err) {
+                alert(err instanceof Error ? err.message : 'Failed to save lesson');
+              }
+            }} className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
               <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Faculty Member</label>
                 <select required value={editingLesson.teacherId} onChange={e => setEditingLesson({ ...editingLesson, teacherId: e.target.value })} className="w-full bg-slate-50 border-none rounded-xl lg:rounded-2xl px-5 lg:px-6 py-3 lg:py-4 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 text-sm"><option value="">Select Personnel</option>{teachers.map(t => <option key={t.id} value={t.id}>{t.firstName} {t.lastName}</option>)}</select>
               </div>
@@ -1193,7 +964,17 @@ const App: React.FC = () => {
               {editingLesson?.id && lessons.some(l => l.id === editingLesson.id) ? (
                 <button
                   type="button"
-                  onClick={handleDeleteCurrentLesson}
+                  onClick={async () => {
+                    if (!isAdmin || !editingLesson?.id) return;
+                    if (!window.confirm('Delete this lesson? This cannot be undone.')) return;
+                    try {
+                      await lessonActions.remove(editingLesson.id);
+                      setIsModalOpen(false);
+                      setEditingLesson(null);
+                    } catch (err) {
+                      alert(err instanceof Error ? err.message : 'Failed to delete lesson');
+                    }
+                  }}
                   className="w-full sm:w-auto text-rose-500 font-black hover:bg-rose-50 px-8 py-4 rounded-2xl lg:rounded-3xl transition-all text-xs uppercase tracking-widest border border-transparent hover:border-rose-100"
                 >
                   Delete Record
@@ -1237,23 +1018,11 @@ const App: React.FC = () => {
               onSubmit={async (e) => {
                 e.preventDefault();
                 if (!editingUser || !isAdmin) return;
-
                 try {
-                  const isUpdate = users.some(u => u.id === editingUser.id);
-                  let savedUser;
-
-                  if (isUpdate) {
-                    savedUser = await updateUser(editingUser as AppUser);
-                    setUsers(prev => prev.map(u => u.id === savedUser.id ? savedUser : u));
-                  } else {
-                    savedUser = await addUser(editingUser as AppUser);
-                    setUsers(prev => [...prev, savedUser]);
-                  }
-
+                  await userActions.save(editingUser, users);
                   setIsUserModalOpen(false);
                   setEditingUser(null);
                 } catch (err) {
-                  console.error(err);
                   alert(err instanceof Error ? err.message : 'Failed to save user');
                 }
               }}
@@ -1306,14 +1075,11 @@ const App: React.FC = () => {
                     type="button"
                     onClick={async () => {
                       if (!editingUser.id || !window.confirm('Are you sure you want to delete this user?')) return;
-
                       try {
-                        await deleteUser(editingUser.id);
-                        setUsers(prev => prev.filter(u => u.id !== editingUser.id));
+                        await userActions.remove(editingUser.id);
                         setIsUserModalOpen(false);
                         setEditingUser(null);
                       } catch (err) {
-                        console.error(err);
                         alert(err instanceof Error ? err.message : 'Failed to delete user');
                       }
                     }}
