@@ -15,7 +15,8 @@ import CopyWeekModal from './components/modals/CopyWeekModal';
 import CopyDayModal from './components/modals/CopyDayModal';
 import LessonModal from './components/modals/LessonModal';
 import UserModal from './components/modals/UserModal';
-
+import DashboardPage from './pages/DashboardPage';
+import SettingsPage from './pages/SettingsPage';
 
 const App: React.FC = () => {
   const { user, isSignedIn, isLoaded } = useUser();
@@ -25,14 +26,6 @@ const App: React.FC = () => {
 
   const view = (location.pathname.slice(1) || 'dashboard') as ViewType;
   const setView = (v: ViewType) => navigate(`/${v}`);
-
-  const [openSettingsSections, setOpenSettingsSections] = useState<Record<string, boolean>>({
-    faculty: false,
-    schools: false,
-    users: false,
-  });
-  const toggleSettingsSection = (key: string) =>
-    setOpenSettingsSections(prev => ({ ...prev, [key]: !prev[key] }));
 
   const [aiAdvice, setAiAdvice] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -65,33 +58,6 @@ const App: React.FC = () => {
     isLoading, errors,
     lessonActions, teacherActions, schoolActions, userActions,
   } = useAppData();
-
-  const stats = useMemo(() => ({ total: lessons.length }), [lessons]);
-
-  const dashboardDayGroups = useMemo(() => {
-    const todayStr = toLocalDateStr(new Date());
-
-    const filtered = [...lessons]
-      .filter(l => {
-        if (l.date < todayStr) return false; // только сегодня и будущее
-        if (defaultTeacherFilter !== 'all' && l.teacherId !== defaultTeacherFilter) return false;
-        return true;
-      })
-      .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
-
-    // Группируем по дате
-    const groups: { date: string; lessons: Lesson[] }[] = [];
-    for (const lesson of filtered) {
-      const last = groups[groups.length - 1];
-      if (last && last.date === lesson.date) {
-        last.lessons.push(lesson);
-      } else {
-        if (groups.length >= 5) break; // берём только 5 ближайших дней с уроками
-        groups.push({ date: lesson.date, lessons: [lesson] });
-      }
-    }
-    return groups;
-  }, [lessons, defaultTeacherFilter]);
 
   const weekDays = useMemo(() => getWeekDays(currentWeekOffset), [currentWeekOffset]);
 
@@ -419,111 +385,19 @@ const App: React.FC = () => {
           <p className="text-slate-500 text-sm font-medium mb-2">Loading...</p>
         )}
         {view === 'dashboard' && (
-          <div className="space-y-8 lg:space-y-12 animate-fadeIn max-w-7xl mx-auto w-full overflow-y-auto custom-scrollbar pr-2">
-            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div><h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Overview</h1><p className="text-slate-500 mt-2 font-medium flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>Class active for <span className="text-indigo-600 font-bold">{user.fullName || user.firstName || 'User'}</span></p></div>
-              {isAdmin && <button onClick={() => openEditModal()} className="bg-indigo-600 text-white px-8 py-4 rounded-[1.5rem] font-black shadow-2xl shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-1 transition-all active:translate-y-0 text-sm lg:text-base">+ New Class</button>}
-            </header>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-              <div className="bg-white p-6 lg:p-8 rounded-[2rem] lg:rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-center"><p className="text-slate-400 text-[11px] font-black uppercase tracking-widest mb-1">Volume</p><div className="flex items-baseline gap-2"><p className="text-5xl lg:text-6xl font-black text-indigo-600">{stats.total}</p><span className="text-slate-300 font-bold uppercase text-[10px] tracking-widest">total units</span></div></div>
-              {/* <div className="bg-indigo-600 p-6 lg:p-8 rounded-[2rem] lg:rounded-[2.5rem] text-white shadow-2xl shadow-indigo-100 relative overflow-hidden flex flex-col justify-center"><p className="opacity-70 text-[11px] font-black uppercase tracking-widest mb-1">AI Guidance</p><p className="text-base lg:text-lg font-bold italic leading-snug z-10">"{aiAdvice || "Calculating optimal patterns..."}"</p><i className="fa-solid fa-bolt absolute -right-4 -bottom-4 text-white/10 text-9xl"></i></div> */}
-            </div>
-            <section>
-              {/* Фильтр по учителю */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-                <h2 className="text-xl lg:text-2xl font-black text-slate-800 tracking-tight">Upcoming roadmap</h2>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-2xl px-4 py-2 shadow-sm">
-                    <i className="fa-solid fa-chalkboard-user text-indigo-400 text-sm"></i>
-                    <select
-                      value={defaultTeacherFilter}
-                      onChange={e => setDashboardTeacherFilter(e.target.value)}
-                      className="text-sm font-bold text-slate-700 bg-transparent border-none outline-none cursor-pointer pr-1"
-                    >
-                      <option value="all">All Teachers</option>
-                      {teachers.map(t => (
-                        <option key={t.id} value={t.id}>{t.firstName} {t.lastName}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <button onClick={() => setView('schedule')} className="text-indigo-600 font-black text-sm hover:underline whitespace-nowrap">
-                    Full Timetable
-                  </button>
-                </div>
-              </div>
-
-              {/* Группировка по дням */}
-              {dashboardDayGroups.length === 0 ? (
-                <div className="text-center py-16 text-slate-400">
-                  <i className="fa-solid fa-calendar-xmark text-4xl mb-3"></i>
-                  <p className="font-bold">No upcoming lessons found</p>
-                </div>
-              ) : (
-                <div className="space-y-8 pb-10">
-                  {dashboardDayGroups.map(group => {
-                    // Форматируем заголовок дня 
-                    const dayDate = new Date(group.date + 'T12:00:00');
-                    const todayStr = toLocalDateStr(new Date());
-                    const isToday = group.date === todayStr;
-                    const dayLabel = isToday
-                      ? 'Today'
-                      : dayDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
-
-                    return (
-                      <div key={group.date}>
-                        {/* Промежуточный итог по дате */}
-                        <div className="flex items-center gap-3 mb-4">
-                          <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest ${isToday
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-slate-100 text-slate-500'
-                            }`}>
-                            {dayLabel}
-                          </span>
-                          <span className="text-xs font-bold text-slate-400">
-                            {group.lessons.length} lesson{group.lessons.length !== 1 ? 's' : ''}
-                          </span>
-                          <div className="flex-1 h-px bg-slate-100"></div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
-                          {group.lessons.map(l => (
-                            <LessonCard
-                              key={l.id}
-                              lesson={l}
-                              teachers={teachers}
-                              schools={schools}
-                              isAdmin={isAdmin}
-                              compact={isMobile}
-                              onEdit={openEditModal}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-          </div>
+          <DashboardPage
+            lessons={lessons}
+            teachers={teachers}
+            schools={schools}
+            isAdmin={isAdmin}
+            isMobile={isMobile}
+            defaultTeacherFilter={defaultTeacherFilter}
+            onNewLesson={() => openEditModal()}
+            onEditLesson={openEditModal}
+          />
         )}
         {view === 'schedule' && (
           <div className="animate-fadeIn w-full h-full flex flex-col min-h-0">
-            {/* <header className="flex flex-col gap-2 max-w-7xl mx-auto w-full mb-3 lg:mb-4 shrink-0">
-              <div className="flex items-start justify-between">
-                <div><h1 className="text-lg lg:text-xl font-black text-slate-900 tracking-tight">{focusedDay ? focusedDay.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Weekly Loop'}</h1></div>
-                <div className="flex items-center gap-2 lg:gap-4 bg-white p-2 rounded-2xl shadow-sm border border-slate-100">
-                  <button onClick={() => { setCurrentWeekOffset(prev => prev - 1); setFocusedDay(null); }} className="w-10 h-10 flex items-center justify-center hover:bg-slate-50 rounded-xl transition-all"><i className="fa-solid fa-chevron-left text-slate-400"></i></button>
-                  <button onClick={() => { setCurrentWeekOffset(0); setFocusedDay(null); }} className="px-3 lg:px-6 py-2 text-[10px] font-black text-indigo-600 hover:bg-indigo-50 rounded-lg uppercase tracking-widest hidden sm:block">
-                    <span>Current</span>
-                    <span>Week</span>
-                  </button>
-                  <button onClick={() => { setCurrentWeekOffset(prev => prev + 1); setFocusedDay(null); }} className="w-10 h-10 flex items-center justify-center hover:bg-slate-50 rounded-xl transition-all"><i className="fa-solid fa-chevron-right text-slate-400"></i></button>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                {focusedDay && <button onClick={() => { setFocusedDay(null); setSelectedSchoolId('all'); setSelectedTeacherId('all'); }} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[10px] font-black hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-100"><i className="fa-solid fa-arrow-left"></i> BACK TO WEEK</button>}
-                {!focusedDay && isAdmin && !isMobile && <button onClick={() => setIsCopyWeekModalOpen(true)} className="bg-white border-2 border-slate-200 px-4 py-2 rounded-xl text-[10px] font-black hover:border-indigo-500 hover:text-indigo-600 transition-all flex items-center gap-2"><i className="fa-solid fa-copy"></i> CLONE WEEK</button>}
-              </div>
-            </header> */}
             <header className="flex flex-col gap-2 max-w-7xl mx-auto w-full mb-3 lg:mb-4 shrink-0">
               <div className="flex items-start justify-between">
                 <div>
@@ -621,151 +495,23 @@ const App: React.FC = () => {
           />
         )}
         {view === 'settings' && isAdmin && (
-          <div className="animate-fadeIn max-w-3xl mx-auto w-full overflow-y-auto custom-scrollbar pr-2 pb-20 space-y-4">
-            <header className="mb-6">
-              <h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Settings</h1>
-              <p className="text-slate-500 font-medium">Manage faculty, academic branches, and user access.</p>
-            </header>
-
-            {/* ── ACCORDION HELPER ── аналог SectionBox в Fiori */}
-            {([
-              {
-                key: 'faculty',
-                icon: 'fa-chalkboard-user',
-                label: 'Faculty',
-                badge: teachers.length,
-                action: <button onClick={() => teacherActions.add()} className="text-indigo-600 text-[10px] font-black hover:underline uppercase tracking-widest">+ STAFF</button>,
-                content: (
-                  <div className="divide-y divide-slate-50">
-                    {teachers.map(t => (
-                      <div key={t.id} className="p-4 lg:p-5 flex items-center gap-4 hover:bg-slate-50/50 transition-colors">
-                        <input type="color" value={t.color}
-                          onChange={e => setTeachers(prev => prev.map(item => item.id === t.id ? { ...item, color: e.target.value } : item))}
-                          onBlur={() => teacherActions.update(t)}
-                          className="w-8 h-8 rounded-lg border-none cursor-pointer" />
-                        <div className="flex-1 grid grid-cols-2 gap-3">
-                          <input value={t.firstName}
-                            onChange={e => setTeachers(prev => prev.map(item => item.id === t.id ? { ...item, firstName: e.target.value } : item))}
-                            onBlur={() => teacherActions.update(t)}
-                            className="bg-slate-50 border-none rounded-xl px-4 py-2 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
-                            placeholder="First name" />
-                          <input value={t.lastName}
-                            onChange={e => setTeachers(prev => prev.map(item => item.id === t.id ? { ...item, lastName: e.target.value } : item))}
-                            onBlur={() => teacherActions.update(t)}
-                            className="bg-slate-50 border-none rounded-xl px-4 py-2 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
-                            placeholder="Last name" />
-                        </div>
-                        <button onClick={() => teacherActions.remove(t.id)} className="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center text-slate-300 hover:text-red-400 transition-colors">
-                          <i className="fa-solid fa-trash-can text-sm"></i>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )
-              },
-              {
-                key: 'schools',
-                icon: 'fa-school',
-                label: 'Schools',
-                badge: schools.length,
-                action: <button onClick={() => schoolActions.add()} className="text-indigo-600 text-[10px] font-black hover:underline uppercase tracking-widest">+ SCHOOL</button>,
-                content: (
-                  <div className="divide-y divide-slate-50">
-                    {schools.map(s => (
-                      <div key={s.id} className="p-4 lg:p-5 flex items-center gap-4 hover:bg-slate-50/50 transition-colors">
-                        <div className="flex-1 space-y-2">
-                          <input value={s.name}
-                            onChange={e => setSchools(prev => prev.map(item => item.id === s.id ? { ...item, name: e.target.value } : item))}
-                            onBlur={() => schoolActions.update(s)}
-                            className="w-full bg-slate-50 border-none rounded-xl px-4 py-2 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
-                            placeholder="School name" />
-                          <input value={s.address || ''}
-                            onChange={e => setSchools(prev => prev.map(item => item.id === s.id ? { ...item, address: e.target.value } : item))}
-                            onBlur={() => schoolActions.update(s)}
-                            className="w-full bg-slate-50 border-none rounded-xl px-4 py-2 text-xs text-slate-500 outline-none focus:ring-2 focus:ring-indigo-500"
-                            placeholder="Address (optional)" />
-                        </div>
-                        <div className="flex flex-col items-center gap-1">
-                          <span className="text-[9px] text-slate-400 font-bold uppercase">Order</span>
-                          <input type="number" value={s.sortOrder ?? 0}
-                            onChange={e => setSchools(prev => prev.map(item => item.id === s.id ? { ...item, sortOrder: parseInt(e.target.value) || 0 } : item))}
-                            onBlur={() => schoolActions.update(s)}
-                            className="w-16 bg-slate-50 border-none rounded-lg px-2 py-2 text-sm font-bold text-slate-700 outline-none text-center" />
-                        </div>
-                        <button onClick={() => schoolActions.remove(s.id)} className="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center text-slate-300 hover:text-red-400 transition-colors">
-                          <i className="fa-solid fa-trash-can text-sm"></i>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )
-              },
-              {
-                key: 'users',
-                icon: 'fa-users',
-                label: 'User Access',
-                badge: users.length,
-                action: <button onClick={() => { setEditingUser({ id: Math.random().toString(36).substring(2, 11), email: '', role: 'viewer' }); setIsUserModalOpen(true); }} className="text-indigo-600 text-[10px] font-black hover:underline uppercase tracking-widest">+ USER</button>,
-                content: (
-                  <div>
-                    <div className="p-3 bg-slate-50 border-b border-slate-100 grid grid-cols-12 gap-4">
-                      <div className="col-span-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Email</div>
-                      <div className="col-span-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Role</div>
-                      <div className="col-span-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Teacher</div>
-                      <div className="col-span-1 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Edit</div>
-                    </div>
-                    <div className="divide-y divide-slate-50">
-                      {users.map(user => (
-                        <div key={user.id} className="p-4 hover:bg-slate-50/50 transition-colors">
-                          <div className="grid grid-cols-12 gap-4 items-center">
-                            <div className="col-span-5 font-medium text-slate-700 truncate text-sm">{user.email}</div>
-                            <div className="col-span-3">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${user.role === 'admin' ? 'bg-indigo-100 text-indigo-800' : user.role === 'teacher' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-800'}`}>
-                                {user.role === 'admin' ? 'Admin' : user.role === 'teacher' ? 'Teacher' : 'Viewer'}
-                              </span>
-                            </div>
-                            <div className="col-span-3 text-sm text-slate-500 truncate">{user.teacherName || '-'}</div>
-                            <div className="col-span-1 flex justify-center">
-                              <button onClick={() => { setEditingUser(user); setIsUserModalOpen(true); }} className="text-slate-400 hover:text-indigo-600 transition-colors">
-                                <i className="fa-solid fa-pen-to-square"></i>
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      {users.length === 0 && <div className="p-8 text-center text-slate-400 text-sm">No users yet.</div>}
-                    </div>
-                  </div>
-                )
-              }
-            ] as const).map(({ key, icon, label, badge, action, content }) => (
-              <div key={key} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                {/* Accordion Header — клик сворачивает/разворачивает, аналог SectionBox header */}
-                <button
-                  onClick={() => toggleSettingsSection(key)}
-                  className="w-full flex items-center justify-between p-5 hover:bg-slate-50/50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center">
-                      <i className={`fa-solid ${icon} text-indigo-600`}></i>
-                    </div>
-                    <span className="text-lg font-black text-slate-800">{label}</span>
-                    <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{badge}</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span onClick={e => e.stopPropagation()}>{action}</span>
-                    <i className={`fa-solid fa-chevron-down text-slate-400 transition-transform duration-200 ${openSettingsSections[key] ? 'rotate-180' : ''}`}></i>
-                  </div>
-                </button>
-                {/* Accordion Body */}
-                {openSettingsSections[key] && (
-                  <div className="border-t border-slate-100">
-                    {content}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+          <SettingsPage
+            teachers={teachers}
+            schools={schools}
+            users={users}
+            setTeachers={setTeachers}
+            setSchools={setSchools}
+            teacherActions={teacherActions}
+            schoolActions={schoolActions}
+            onAddUser={() => {
+              setEditingUser({ id: Math.random().toString(36).substring(2, 11), email: '', role: 'viewer' });
+              setIsUserModalOpen(true);
+            }}
+            onEditUser={(user) => {
+              setEditingUser(user);
+              setIsUserModalOpen(true);
+            }}
+          />
         )}
         {view === 'admin-manage' && (
           <div className="space-y-8 lg:space-y-12 animate-fadeIn max-w-7xl mx-auto w-full overflow-y-auto custom-scrollbar pr-2 pb-20">
