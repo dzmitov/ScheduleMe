@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '@vercel/postgres';
-import { requireAuth, requireAdmin, setCors } from '../_auth';
+import { requireAuth, requireAdmin, setCors } from '../_auth.js';
 
 function rowToApi(row: Record<string, unknown>) {
   return {

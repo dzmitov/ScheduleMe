@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '@vercel/postgres';
-import { requireAuth, setCors } from './_auth';
+import { requireAuth, setCors } from './_auth.js';
 
 // ... (rowToApi и normalizeLesson остаются без изменений) ...
 
