@@ -1,33 +1,37 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '@vercel/postgres';
-
-const cors = (res: VercelResponse) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-};
+import { requireAuth, requireAdmin, setCors } from './_auth';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  cors(res);
+  setCors(res);
   if (req.method === 'OPTIONS') return res.status(204).end();
 
   try {
     await ensureTable();
 
     if (req.method === 'GET') {
-      // Добавляем sort_order в SELECT и сортируем по нему
-      const { rows } = await sql`SELECT id, name, address, sort_order FROM schools ORDER BY sort_order ASC, name ASC`;
+      // GET: доступно всем авторизованным пользователям
+      const auth = await requireAuth(req, res);
+      if (!auth) return;
+
+      const { rows } = await sql`
+        SELECT id, name, address, sort_order FROM schools ORDER BY sort_order ASC, name ASC
+      `;
       return res.status(200).json(rows);
     }
 
     if (req.method === 'POST') {
+      // POST: только администратор
+      const auth = await requireAdmin(req, res);
+      if (!auth) return;
+
       const body = req.body as Record<string, unknown>;
       const school = normalizeSchool(body);
       await sql`
         INSERT INTO schools (id, name, address, sort_order)
         VALUES (${school.id}, ${school.name}, ${school.address}, ${school.sortOrder})
-        ON CONFLICT (id) DO UPDATE SET 
-          name = EXCLUDED.name, 
+        ON CONFLICT (id) DO UPDATE SET
+          name = EXCLUDED.name,
           address = EXCLUDED.address,
           sort_order = EXCLUDED.sort_order
       `;
@@ -42,7 +46,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 }
 
 async function ensureTable() {
-  // Создаём таблицу с полем sort_order
   await sql`
     CREATE TABLE IF NOT EXISTS schools (
       id TEXT PRIMARY KEY,
@@ -51,14 +54,8 @@ async function ensureTable() {
       sort_order INTEGER DEFAULT 0
     )
   `;
-  
-  // На случай, если таблица уже существует - добавляем колонки
-  await sql`
-    ALTER TABLE schools ADD COLUMN IF NOT EXISTS address TEXT NOT NULL DEFAULT ''
-  `;
-  await sql`
-    ALTER TABLE schools ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0
-  `;
+  await sql`ALTER TABLE schools ADD COLUMN IF NOT EXISTS address TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE schools ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0`;
 }
 
 function normalizeSchool(body: Record<string, unknown>) {
@@ -66,6 +63,7 @@ function normalizeSchool(body: Record<string, unknown>) {
     id: String(body.id ?? ''),
     name: String(body.name ?? ''),
     address: String(body.address ?? ''),
-    sortOrder: typeof body.sortOrder === 'number' ? body.sortOrder : (typeof body.sort_order === 'number' ? body.sort_order : 0),
+    sortOrder: typeof body.sortOrder === 'number' ? body.sortOrder
+      : typeof body.sort_order === 'number' ? body.sort_order : 0,
   };
 }

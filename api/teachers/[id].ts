@@ -1,11 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '@vercel/postgres';
-
-const cors = (res: VercelResponse) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, PATCH, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-};
+import { requireAuth, requireAdmin, setCors } from '../_auth';
 
 function rowToApi(row: Record<string, unknown>) {
   return {
@@ -26,7 +21,7 @@ function normalizeTeacher(body: Record<string, unknown>, id: string) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  cors(res);
+  setCors(res, 'GET, PATCH, DELETE, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(204).end();
 
   const id = typeof req.query.id === 'string' ? req.query.id : null;
@@ -34,12 +29,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (req.method === 'GET') {
+      // GET: доступно всем авторизованным пользователям
+      const auth = await requireAuth(req, res);
+      if (!auth) return;
+
       const { rows } = await sql`SELECT * FROM teachers WHERE id = ${id}`;
       if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
       return res.status(200).json(rowToApi(rows[0]));
     }
 
     if (req.method === 'PATCH') {
+      // PATCH: только администратор
+      const auth = await requireAdmin(req, res);
+      if (!auth) return;
+
       const body = (req.body ?? {}) as Record<string, unknown>;
       const teacher = normalizeTeacher(body, id);
       await sql`
@@ -51,6 +54,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'DELETE') {
+      // DELETE: только администратор
+      const auth = await requireAdmin(req, res);
+      if (!auth) return;
+
       await sql`DELETE FROM teachers WHERE id = ${id}`;
       return res.status(204).end();
     }

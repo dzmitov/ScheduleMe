@@ -1,109 +1,91 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '@vercel/postgres';
+import { requireAdmin, setCors } from '../_auth';
 
-const cors = (res: VercelResponse) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-};
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function isValidRole(role: string): boolean {
+  return ['admin', 'teacher', 'viewer'].includes(role);
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  cors(res);
+  setCors(res, 'GET, PATCH, DELETE, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(204).end();
 
-  const { id } = req.query;
-  if (!id || typeof id !== 'string') {
-    return res.status(400).json({ error: 'Invalid user ID' });
-  }
+  // Все операции с конкретным пользователем — только для администратора
+  const auth = await requireAdmin(req, res);
+  if (!auth) return;
+
+  const id = typeof req.query.id === 'string' ? req.query.id : null;
+  if (!id) return res.status(400).json({ error: 'Missing id' });
 
   try {
-    // Check if user exists
-    const { rowCount } = await sql`SELECT 1 FROM app_users WHERE id = ${id}`;
-    if (rowCount === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
     if (req.method === 'GET') {
       const { rows } = await sql`
-        SELECT 
-          app_users.id, 
-          app_users.email, 
-          app_users.role, 
-          app_users.teacher_id,
-          teachers.first_name as teacher_first_name,
-          teachers.last_name as teacher_last_name
-        FROM app_users
-        LEFT JOIN teachers ON app_users.teacher_id = teachers.id
-        WHERE app_users.id = ${id}
+        SELECT id, email, role, teacher_id FROM app_users WHERE id = ${id}
       `;
-      
-      if (rows.length === 0) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-      
+      if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
       return res.status(200).json(rows[0]);
     }
 
     if (req.method === 'PATCH') {
-      const body = req.body as Record<string, unknown>;
-      
-      // Validate email if provided
-      if (body.email && !isValidEmail(String(body.email))) {
-        return res.status(400).json({ error: 'Invalid email format' });
-      }
-      
-      // Validate role if provided
-      if (body.role && !['admin', 'teacher', 'viewer'].includes(String(body.role))) {
-        return res.status(400).json({ error: 'Invalid role. Must be admin, teacher, or viewer' });
-      }
-      
-      // If teacher_id is provided, verify it exists
-      if (body.teacherId) {
-        const { rowCount } = await sql`SELECT 1 FROM teachers WHERE id = ${String(body.teacherId)}`;
-        if (rowCount === 0) {
-          return res.status(400).json({ error: 'Teacher not found' });
+      const body = (req.body ?? {}) as Record<string, unknown>;
+
+      // Валидация входных данных
+      // ABAP-аналогия: проверка через CHECK перед MODIFY ZUSERS
+      if (body.email !== undefined) {
+        const email = String(body.email).toLowerCase().trim();
+        if (!isValidEmail(email)) {
+          return res.status(400).json({ error: 'Invalid email address' });
         }
       }
-      
-      // Build dynamic update query
-      let updateQuery = 'UPDATE app_users SET ';
-      const updateValues: any[] = [];
+      if (body.role !== undefined && !isValidRole(String(body.role))) {
+        return res.status(400).json({ error: 'Invalid role' });
+      }
+
+      // Строим UPDATE динамически — только переданные поля
       const updateFields: string[] = [];
-      
+      const updateValues: unknown[] = [];
+
       if (body.email !== undefined) {
-        updateFields.push('email = $' + (updateValues.length + 1));
+        updateFields.push(`email = $${updateValues.length + 1}`);
         updateValues.push(String(body.email).toLowerCase().trim());
       }
-      
       if (body.role !== undefined) {
-        updateFields.push('role = $' + (updateValues.length + 1));
+        updateFields.push(`role = $${updateValues.length + 1}`);
         updateValues.push(String(body.role));
       }
-      
-      if (body.teacherId !== undefined) {
-        updateFields.push('teacher_id = $' + (updateValues.length + 1));
+      if ('teacherId' in body) {
+        updateFields.push(`teacher_id = $${updateValues.length + 1}`);
         updateValues.push(body.teacherId ? String(body.teacherId) : null);
       }
-      
+
       if (updateFields.length === 0) {
         return res.status(400).json({ error: 'No valid fields to update' });
       }
-      
-      updateQuery += updateFields.join(', ') + ' WHERE id = $' + (updateValues.length + 1);
+
+      const updateQuery =
+        'UPDATE app_users SET ' + updateFields.join(', ') + ' WHERE id = $' + (updateValues.length + 1);
       updateValues.push(id);
-      
+
       await sql.query(updateQuery, updateValues);
-      
-      // Get updated user
+
       const { rows } = await sql`
         SELECT id, email, role, teacher_id FROM app_users WHERE id = ${id}
       `;
-      
       return res.status(200).json({ user: rows[0] });
     }
 
     if (req.method === 'DELETE') {
-      // ВМЕСТО проверки email — защита от удаления последнего админа:
+      // Защита: нельзя удалить самого себя
+      const { rows: selfRows } = await sql`SELECT email FROM app_users WHERE id = ${id}`;
+      if (selfRows[0]?.email?.toLowerCase() === auth.email.toLowerCase()) {
+        return res.status(400).json({ error: 'Cannot delete your own account' });
+      }
+
+      // Защита: нельзя удалить последнего администратора
       const { rows: userRows } = await sql`SELECT role FROM app_users WHERE id = ${id}`;
       if (userRows[0]?.role === 'admin') {
         const { rowCount } = await sql`SELECT 1 FROM app_users WHERE role = 'admin'`;
@@ -111,6 +93,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return res.status(400).json({ error: 'Cannot delete the last admin user' });
         }
       }
+
       await sql`DELETE FROM app_users WHERE id = ${id}`;
       return res.status(200).json({ success: true });
     }
@@ -120,9 +103,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error(err);
     return res.status(500).json({ error: err instanceof Error ? err.message : 'Internal error' });
   }
-}
-
-function isValidEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
 }

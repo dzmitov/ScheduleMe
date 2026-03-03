@@ -1,9 +1,56 @@
+/**
+ * dbService.ts — клиентский сервис для работы с API.
+ *
+ * ABAP-аналогия: набор FUNCTION MODULE с RFC-интерфейсом,
+ * которые вызываются из отчётов и транзакций.
+ *
+ * ИЗМЕНЕНИЕ БЕЗОПАСНОСТИ: теперь все запросы отправляют
+ * Clerk JWT-токен в заголовке Authorization.
+ * Бэкенд проверяет этот токен перед любой операцией.
+ */
+
 import { LessonStatus } from '../../types';
 import type { Lesson, Teacher, School, AppUser } from '../../types';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
 
-// --- Teachers ---
+// ── ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ───────────────────────────────────────────────────
+
+/**
+ * Получает Clerk JWT-токен из глобального объекта window.
+ * Токен устанавливается хуком useTokenSync (см. ниже).
+ *
+ * ABAP-аналогия: чтение SY-UNAME + токена из контекста сессии.
+ */
+let _getToken: (() => Promise<string | null>) | null = null;
+
+export function setTokenProvider(fn: () => Promise<string | null>) {
+  _getToken = fn;
+}
+
+async function authHeaders(): Promise<HeadersInit> {
+  const token = _getToken ? await _getToken() : null;
+  if (!token) {
+    throw new Error('Not authenticated: no token available');
+  }
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+  };
+}
+
+async function authGetHeaders(): Promise<HeadersInit> {
+  const token = _getToken ? await _getToken() : null;
+  if (!token) {
+    throw new Error('Not authenticated: no token available');
+  }
+  return {
+    'Authorization': `Bearer ${token}`,
+  };
+}
+
+// ── TEACHERS ──────────────────────────────────────────────────────────────────
+
 function rowToTeacher(row: Record<string, unknown>): Teacher {
   return {
     id: String(row.id ?? ''),
@@ -14,11 +61,10 @@ function rowToTeacher(row: Record<string, unknown>): Teacher {
 }
 
 export async function fetchTeachers(): Promise<Teacher[]> {
-  const res = await fetch(`${API_BASE}/api/teachers`);
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`fetchTeachers failed: ${res.status} ${text}`);
-  }
+  const res = await fetch(`${API_BASE}/api/teachers`, {
+    headers: await authGetHeaders(),
+  });
+  if (!res.ok) throw new Error(`fetchTeachers failed: ${res.status} ${await res.text()}`);
   const data = await res.json();
   const rows = Array.isArray(data) ? data : (data.teachers ?? data.rows ?? []);
   return rows.map((row: Record<string, unknown>) => rowToTeacher(row));
@@ -27,13 +73,10 @@ export async function fetchTeachers(): Promise<Teacher[]> {
 export async function addTeacher(teacher: Teacher): Promise<Teacher> {
   const res = await fetch(`${API_BASE}/api/teachers`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify(teacher),
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`addTeacher failed: ${res.status} ${text}`);
-  }
+  if (!res.ok) throw new Error(`addTeacher failed: ${res.status} ${await res.text()}`);
   const data = await res.json();
   return rowToTeacher(data.teacher ?? data);
 }
@@ -41,26 +84,24 @@ export async function addTeacher(teacher: Teacher): Promise<Teacher> {
 export async function updateTeacher(teacher: Teacher): Promise<Teacher> {
   const res = await fetch(`${API_BASE}/api/teachers/${encodeURIComponent(teacher.id)}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify(teacher),
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`updateTeacher failed: ${res.status} ${text}`);
-  }
+  if (!res.ok) throw new Error(`updateTeacher failed: ${res.status} ${await res.text()}`);
   const data = await res.json();
   return rowToTeacher(data.teacher ?? data);
 }
 
 export async function deleteTeacher(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/teachers/${encodeURIComponent(id)}`, { method: 'DELETE' });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`deleteTeacher failed: ${res.status} ${text}`);
-  }
+  const res = await fetch(`${API_BASE}/api/teachers/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: await authGetHeaders(),
+  });
+  if (!res.ok) throw new Error(`deleteTeacher failed: ${res.status} ${await res.text()}`);
 }
 
-// --- Schools ---
+// ── SCHOOLS ───────────────────────────────────────────────────────────────────
+
 function rowToSchool(row: Record<string, unknown>): School {
   return {
     id: String(row.id ?? ''),
@@ -71,11 +112,10 @@ function rowToSchool(row: Record<string, unknown>): School {
 }
 
 export async function fetchSchools(): Promise<School[]> {
-  const res = await fetch(`${API_BASE}/api/schools`);
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`fetchSchools failed: ${res.status} ${text}`);
-  }
+  const res = await fetch(`${API_BASE}/api/schools`, {
+    headers: await authGetHeaders(),
+  });
+  if (!res.ok) throw new Error(`fetchSchools failed: ${res.status} ${await res.text()}`);
   const data = await res.json();
   const rows = Array.isArray(data) ? data : (data.schools ?? data.rows ?? []);
   return rows.map((row: Record<string, unknown>) => rowToSchool(row));
@@ -84,13 +124,10 @@ export async function fetchSchools(): Promise<School[]> {
 export async function addSchool(school: School): Promise<School> {
   const res = await fetch(`${API_BASE}/api/schools`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify(school),
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`addSchool failed: ${res.status} ${text}`);
-  }
+  if (!res.ok) throw new Error(`addSchool failed: ${res.status} ${await res.text()}`);
   const data = await res.json();
   return rowToSchool(data.school ?? data);
 }
@@ -98,26 +135,23 @@ export async function addSchool(school: School): Promise<School> {
 export async function updateSchool(school: School): Promise<School> {
   const res = await fetch(`${API_BASE}/api/schools/${encodeURIComponent(school.id)}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify(school),
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`updateSchool failed: ${res.status} ${text}`);
-  }
+  if (!res.ok) throw new Error(`updateSchool failed: ${res.status} ${await res.text()}`);
   const data = await res.json();
   return rowToSchool(data.school ?? data);
 }
 
 export async function deleteSchool(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/schools/${encodeURIComponent(id)}`, { method: 'DELETE' });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`deleteSchool failed: ${res.status} ${text}`);
-  }
+  const res = await fetch(`${API_BASE}/api/schools/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: await authGetHeaders(),
+  });
+  if (!res.ok) throw new Error(`deleteSchool failed: ${res.status} ${await res.text()}`);
 }
 
-// --- Lessons ---
+// ── LESSONS ───────────────────────────────────────────────────────────────────
 
 function rowToLesson(row: Record<string, unknown>): Lesson {
   return {
@@ -130,78 +164,57 @@ function rowToLesson(row: Record<string, unknown>): Lesson {
     startTime: String(row.startTime ?? row.start_time ?? ''),
     endTime: String(row.endTime ?? row.end_time ?? ''),
     room: String(row.room ?? ''),
-  status: (row.status as LessonStatus) ?? LessonStatus.UPCOMING,
+    status: (row.status as LessonStatus) ?? LessonStatus.UPCOMING,
     topic: row.topic != null ? String(row.topic) : undefined,
     notes: row.notes != null ? String(row.notes) : undefined,
     correctedDuration:
-  row.correctedDuration != null ? Number(row.correctedDuration) 
-    : row.corrected_duration != null ? Number(row.corrected_duration)
-    : undefined,
+      row.correctedDuration != null ? Number(row.correctedDuration)
+        : row.corrected_duration != null ? Number(row.corrected_duration)
+          : undefined,
   };
 }
 
-/**
- * Загружает все уроки из таблицы lessons в Vercel Postgres.
- */
 export async function fetchLessons(): Promise<Lesson[]> {
-  const res = await fetch(`${API_BASE}/api/lessons`);
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`fetchLessons failed: ${res.status} ${text}`);
-  }
+  const res = await fetch(`${API_BASE}/api/lessons`, {
+    headers: await authGetHeaders(),
+  });
+  if (!res.ok) throw new Error(`fetchLessons failed: ${res.status} ${await res.text()}`);
   const data = await res.json();
   const rows = Array.isArray(data) ? data : (data.lessons ?? data.rows ?? []);
   return rows.map((row: Record<string, unknown>) => rowToLesson(row));
 }
 
-/**
- * Добавляет новый урок в таблицу lessons.
- */
 export async function addLesson(lesson: Lesson): Promise<Lesson> {
   const res = await fetch(`${API_BASE}/api/lessons`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify(lesson),
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`addLesson failed: ${res.status} ${text}`);
-  }
+  if (!res.ok) throw new Error(`addLesson failed: ${res.status} ${await res.text()}`);
   const data = await res.json();
   return rowToLesson(data.lesson ?? data);
 }
 
-/**
- * Обновляет урок в таблице lessons.
- */
 export async function updateLesson(lesson: Lesson): Promise<Lesson> {
   const res = await fetch(`${API_BASE}/api/lessons/${encodeURIComponent(lesson.id)}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify(lesson),
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`updateLesson failed: ${res.status} ${text}`);
-  }
+  if (!res.ok) throw new Error(`updateLesson failed: ${res.status} ${await res.text()}`);
   const data = await res.json();
   return rowToLesson(data.lesson ?? data);
 }
 
-/**
- * Удаляет урок по id.
- */
 export async function deleteLesson(id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/lessons/${encodeURIComponent(id)}`, {
     method: 'DELETE',
+    headers: await authGetHeaders(),
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`deleteLesson failed: ${res.status} ${text}`);
-  }
+  if (!res.ok) throw new Error(`deleteLesson failed: ${res.status} ${await res.text()}`);
 }
 
-// --- Users ---
+// ── USERS ─────────────────────────────────────────────────────────────────────
 
 function rowToAppUser(row: Record<string, unknown>): AppUser {
   return {
@@ -209,29 +222,30 @@ function rowToAppUser(row: Record<string, unknown>): AppUser {
     email: String(row.email ?? ''),
     role: String(row.role ?? 'viewer') as AppUser['role'],
     teacherId: row.teacher_id ? String(row.teacher_id) : undefined,
-    teacherName: row.teacher_first_name && row.teacher_last_name 
-      ? `${row.teacher_first_name} ${row.teacher_last_name}` 
-      : undefined
+    teacherName: row.teacher_first_name && row.teacher_last_name
+      ? `${row.teacher_first_name} ${row.teacher_last_name}`
+      : undefined,
   };
 }
 
-/**
- * Загружает всех пользователей из таблицы app_users.
- */
 export async function fetchUsers(): Promise<AppUser[]> {
-  const res = await fetch(`${API_BASE}/api/users`);
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`fetchUsers failed: ${res.status} ${text}`);
-  }
+  const res = await fetch(`${API_BASE}/api/users`, {
+    headers: await authGetHeaders(),
+  });
+  if (!res.ok) throw new Error(`fetchUsers failed: ${res.status} ${await res.text()}`);
   const data = await res.json();
   const rows = Array.isArray(data) ? data : (data.users ?? data.rows ?? []);
   return rows.map((row: Record<string, unknown>) => rowToAppUser(row));
 }
 
 /**
- * Проверяет роль пользователя по email.
- * Возвращает объект с информацией о правах пользователя.
+ * Проверяет роль текущего пользователя через СЕРВЕРНЫЙ endpoint /api/users?me=true
+ *
+ * ABAP-аналогия: CALL FUNCTION 'SUSR_USER_AUTH_FOR_OBJ_GET'
+ * — не читает всю таблицу пользователей, а только данные текущего юзера.
+ *
+ * В отличие от старого подхода (fetchUsers + поиск на клиенте),
+ * этот метод безопасен: данные других пользователей не передаются на фронт.
  */
 export async function checkUserRole(email: string): Promise<{
   isAdmin: boolean;
@@ -240,18 +254,22 @@ export async function checkUserRole(email: string): Promise<{
   userId?: string;
 }> {
   try {
-    const users = await fetchUsers();
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    
-    if (!user) {
+    const res = await fetch(`${API_BASE}/api/users?me=true`, {
+      headers: await authGetHeaders(),
+    });
+
+    if (res.status === 403) {
       return { isAdmin: false, role: 'unauthorized' };
     }
-    
+    if (!res.ok) {
+      return { isAdmin: false, role: 'viewer' };
+    }
+
+    const data = await res.json();
     return {
-      isAdmin: user.role === 'admin',
-      role: user.role,
-      teacherId: user.teacherId,
-      userId: user.id
+      isAdmin: data.isAdmin,
+      role: data.role,
+      teacherId: data.teacherId,
     };
   } catch (error) {
     console.error('Error checking user role:', error);
@@ -259,49 +277,32 @@ export async function checkUserRole(email: string): Promise<{
   }
 }
 
-/**
- * Добавляет нового пользователя в таблицу app_users.
- */
 export async function addUser(user: AppUser): Promise<AppUser> {
   const res = await fetch(`${API_BASE}/api/users`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify(user),
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`addUser failed: ${res.status} ${text}`);
-  }
+  if (!res.ok) throw new Error(`addUser failed: ${res.status} ${await res.text()}`);
   const data = await res.json();
   return rowToAppUser(data.user ?? data);
 }
 
-/**
- * Обновляет пользователя в таблице app_users.
- */
 export async function updateUser(user: AppUser): Promise<AppUser> {
   const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(user.id)}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify({ ...user, teacherId: user.teacherId ?? null }),
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`updateUser failed: ${res.status} ${text}`);
-  }
+  if (!res.ok) throw new Error(`updateUser failed: ${res.status} ${await res.text()}`);
   const data = await res.json();
   return rowToAppUser(data.user ?? data);
 }
 
-/**
- * Удаляет пользователя по id.
- */
 export async function deleteUser(id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(id)}`, {
     method: 'DELETE',
+    headers: await authGetHeaders(),
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`deleteUser failed: ${res.status} ${text}`);
-  }
+  if (!res.ok) throw new Error(`deleteUser failed: ${res.status} ${await res.text()}`);
 }

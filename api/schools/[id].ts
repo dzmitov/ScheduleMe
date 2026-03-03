@@ -1,11 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '@vercel/postgres';
-
-const cors = (res: VercelResponse) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, PATCH, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-};
+import { requireAuth, requireAdmin, setCors } from '../_auth';
 
 function normalizeSchool(body: Record<string, unknown>, id: string) {
   return {
@@ -17,7 +12,7 @@ function normalizeSchool(body: Record<string, unknown>, id: string) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  cors(res);
+  setCors(res, 'GET, PATCH, DELETE, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(204).end();
 
   const id = typeof req.query.id === 'string' ? req.query.id : null;
@@ -25,23 +20,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (req.method === 'GET') {
+      // GET: доступно всем авторизованным пользователям
+      const auth = await requireAuth(req, res);
+      if (!auth) return;
+
       const { rows } = await sql`SELECT * FROM schools WHERE id = ${id}`;
       if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
-      return res.status(200).json({ id: rows[0].id, name: rows[0].name });
+      return res.status(200).json({ id: rows[0].id, name: rows[0].name, address: rows[0].address, sortOrder: rows[0].sort_order });
     }
 
     if (req.method === 'PATCH') {
+      // PATCH: только администратор
+      const auth = await requireAdmin(req, res);
+      if (!auth) return;
+
       const body = (req.body ?? {}) as Record<string, unknown>;
       const school = normalizeSchool(body, id);
-      await sql`UPDATE schools 
-        SET name = ${school.name}, 
-            address = ${school.address}, 
-            sort_order = ${school.sortOrder} 
-        WHERE id = ${id}`;
+      await sql`
+        UPDATE schools SET
+          name = ${school.name},
+          address = ${school.address},
+          sort_order = ${school.sortOrder}
+        WHERE id = ${id}
+      `;
       return res.status(200).json({ school: { ...school, id } });
     }
 
     if (req.method === 'DELETE') {
+      // DELETE: только администратор
+      const auth = await requireAdmin(req, res);
+      if (!auth) return;
+
       await sql`DELETE FROM schools WHERE id = ${id}`;
       return res.status(204).end();
     }

@@ -1,20 +1,19 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '@vercel/postgres';
-
-const cors = (res: VercelResponse) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-};
+import { requireAuth, requireAdmin, setCors } from './_auth';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  cors(res);
+  setCors(res);
   if (req.method === 'OPTIONS') return res.status(204).end();
 
   try {
     await ensureTable();
 
     if (req.method === 'GET') {
+      // GET: доступно всем авторизованным пользователям
+      const auth = await requireAuth(req, res);
+      if (!auth) return;
+
       const { rows } = await sql`
         SELECT id, first_name, last_name, color FROM teachers ORDER BY last_name, first_name
       `;
@@ -22,6 +21,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'POST') {
+      // POST: только администратор
+      const auth = await requireAdmin(req, res);
+      if (!auth) return;
+
       const body = req.body as Record<string, unknown>;
       const teacher = normalizeTeacher(body);
       await sql`

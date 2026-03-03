@@ -1,65 +1,94 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '@vercel/postgres';
+import { requireAdmin, requireAuth, setCors } from './_auth';
 
-const cors = (res: VercelResponse) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-};
+function rowToApi(row: Record<string, unknown>) {
+  return {
+    id: row.id,
+    email: row.email,
+    role: row.role,
+    teacherId: row.teacher_id ?? undefined,
+  };
+}
+
+function generateId() {
+  // Используем crypto для криптографически стойкого ID
+  // ABAP-аналогия: CALL FUNCTION 'GUID_CREATE' вместо SY-TABIX
+  return crypto.randomUUID().replace(/-/g, '').substring(0, 11);
+}
+
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+function isValidRole(role: string): boolean {
+  return ['admin', 'teacher', 'viewer'].includes(role);
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  cors(res);
+  setCors(res);
   if (req.method === 'OPTIONS') return res.status(204).end();
 
-  try {
-    await ensureTable();
+  // ── СПЕЦИАЛЬНЫЙ ENDPOINT: GET /api/users/me ───────────────────────────────────
+  // Любой авторизованный пользователь может узнать свою роль.
+  // ABAP-аналогия: чтение своего SY-UNAME — всегда разрешено.
+  if (req.method === 'GET' && req.query.me === 'true') {
+    const auth = await requireAuth(req, res);
+    if (!auth) return;
+    return res.status(200).json({
+      email: auth.email,
+      role: auth.role,
+      isAdmin: auth.isAdmin,
+      teacherId: auth.teacherId,
+    });
+  }
 
+  // ── ВСЕ ОСТАЛЬНЫЕ ОПЕРАЦИИ С ПОЛЬЗОВАТЕЛЯМИ — ТОЛЬКО ДЛЯ АДМИНИСТРАТОРА ──────
+  // ABAP-аналогия: AUTHORITY-CHECK OBJECT 'S_USER_GRP' ID 'ACTVT' FIELD '01'
+  const auth = await requireAdmin(req, res);
+  if (!auth) return;
+
+  try {
     if (req.method === 'GET') {
+      await ensureTable();
       const { rows } = await sql`
-        SELECT 
-          app_users.id, 
-          app_users.email, 
-          app_users.role, 
-          app_users.teacher_id,
-          teachers.first_name as teacher_first_name,
-          teachers.last_name as teacher_last_name
-        FROM app_users
-        LEFT JOIN teachers ON app_users.teacher_id = teachers.id
-        ORDER BY app_users.email
+        SELECT u.id, u.email, u.role, u.teacher_id
+        FROM app_users u
+        ORDER BY u.email
       `;
-      return res.status(200).json(rows);
+      return res.status(200).json(rows.map(rowToApi));
     }
 
     if (req.method === 'POST') {
-      const body = req.body as Record<string, unknown>;
-      const user = normalizeUser(body);
-      
-      // Validate email format
-      if (!isValidEmail(user.email)) {
-        return res.status(400).json({ error: 'Invalid email format' });
+      await ensureTable();
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const email = String(body.email ?? '').toLowerCase().trim();
+      const role = String(body.role ?? 'viewer');
+
+      if (!email || !isValidEmail(email)) {
+        return res.status(400).json({ error: 'Invalid email address' });
       }
-      
-      // Validate role
-      if (!['admin', 'teacher', 'viewer'].includes(user.role)) {
-        return res.status(400).json({ error: 'Invalid role. Must be admin, teacher, or viewer' });
+      if (!isValidRole(role)) {
+        return res.status(400).json({ error: 'Invalid role. Must be: admin, teacher, or viewer' });
       }
-      
-      // If teacher_id is provided, verify it exists
-      if (user.teacherId) {
-        const { rowCount } = await sql`SELECT 1 FROM teachers WHERE id = ${user.teacherId}`;
-        if (rowCount === 0) {
-          return res.status(400).json({ error: 'Teacher not found' });
-        }
+
+      // Проверка на дубликат email
+      const { rows: existing } = await sql`SELECT id FROM app_users WHERE LOWER(email) = ${email}`;
+      if (existing.length > 0) {
+        return res.status(409).json({ error: 'User with this email already exists' });
       }
-      
+
+      const id = String(body.id ?? generateId());
+      const teacherId = body.teacherId ? String(body.teacherId) : null;
+
       await sql`
         INSERT INTO app_users (id, email, role, teacher_id)
-        VALUES (${user.id}, ${user.email}, ${user.role}, ${user.teacherId})
-        ON CONFLICT (email) DO UPDATE SET
-          role = EXCLUDED.role, 
-          teacher_id = EXCLUDED.teacher_id
+        VALUES (${id}, ${email}, ${role}, ${teacherId})
       `;
-      return res.status(200).json({ user });
+
+      const { rows } = await sql`SELECT * FROM app_users WHERE id = ${id}`;
+      return res.status(201).json({ user: rowToApi(rows[0]) });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
@@ -73,32 +102,9 @@ async function ensureTable() {
   await sql`
     CREATE TABLE IF NOT EXISTS app_users (
       id TEXT PRIMARY KEY,
-      email TEXT NOT NULL UNIQUE,
+      email TEXT UNIQUE NOT NULL,
       role TEXT NOT NULL DEFAULT 'viewer',
-      teacher_id TEXT NULL REFERENCES teachers(id) ON DELETE SET NULL,
-      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      teacher_id TEXT
     )
   `;
-  
-  await sql`
-    CREATE INDEX IF NOT EXISTS idx_app_users_email ON app_users(email)
-  `;
-}
-
-function normalizeUser(body: Record<string, unknown>) {
-  return {
-    id: String(body.id ?? generateId()),
-    email: String(body.email ?? '').toLowerCase().trim(),
-    role: String(body.role ?? 'viewer'),
-    teacherId: body.teacherId ? String(body.teacherId) : null,
-  };
-}
-
-function generateId() {
-  return Math.random().toString(36).substring(2, 11);
-}
-
-function isValidEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
 }

@@ -17,8 +17,10 @@ import LessonModal from './components/modals/LessonModal';
 import UserModal from './components/modals/UserModal';
 import DashboardPage from './pages/DashboardPage';
 import SettingsPage from './pages/SettingsPage';
+import { useTokenSync } from './src/hooks/useTokenSync';
 
 const App: React.FC = () => {
+  useTokenSync();
   const { user, isSignedIn, isLoaded } = useUser();
   const navigate = useNavigate();       // инструмент для смены URL
   const location = useLocation();       // читаем текущий URL

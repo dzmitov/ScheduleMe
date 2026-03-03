@@ -1,11 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '@vercel/postgres';
-
-const cors = (res: VercelResponse) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, PATCH, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-};
+import { requireAuth, setCors } from '../_auth';
 
 function rowToApi(row: Record<string, unknown>) {
   return {
@@ -45,8 +40,12 @@ function normalizeLesson(body: Record<string, unknown>, id: string) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  cors(res);
+  setCors(res, 'GET, PATCH, DELETE, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(204).end();
+
+  // ── AUTH ──────────────────────────────────────────────────────────────────────
+  const auth = await requireAuth(req, res);
+  if (!auth) return;
 
   const id = typeof req.query.id === 'string' ? req.query.id : null;
   if (!id) return res.status(400).json({ error: 'Missing id' });
@@ -55,26 +54,55 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'GET') {
       const { rows } = await sql`SELECT * FROM lessons WHERE id = ${id}`;
       if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
+
+      // Учитель может смотреть только свои уроки
+      const lesson = rows[0];
+      if (!auth.isAdmin && auth.teacherId && lesson.teacher_id !== auth.teacherId) {
+        return res.status(403).json({ error: 'Access denied: not your lesson' });
+      }
+
+      return res.status(200).json(rowToApi(lesson));
+    }
+
+    // PATCH и DELETE — только для администраторов
+    // ABAP-аналогия: AUTHORITY-CHECK ... ID 'ACTVT' FIELD '02' (изменение)
+    if (req.method === 'PATCH') {
+      if (!auth.isAdmin) {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const lesson = normalizeLesson(body, id);
+
+      await sql`
+        UPDATE lessons SET
+          subject = ${lesson.subject},
+          grade = ${lesson.grade},
+          teacher_id = ${lesson.teacherId},
+          school_id = ${lesson.schoolId},
+          date = ${lesson.date},
+          start_time = ${lesson.startTime},
+          end_time = ${lesson.endTime},
+          room = ${lesson.room},
+          status = ${lesson.status},
+          topic = ${lesson.topic},
+          notes = ${lesson.notes},
+          corrected_duration = ${lesson.correctedDuration}
+        WHERE id = ${id}
+      `;
+
+      const { rows } = await sql`SELECT * FROM lessons WHERE id = ${id}`;
+      if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
       return res.status(200).json(rowToApi(rows[0]));
     }
 
-    if (req.method === 'PATCH') {
-      const body = (req.body ?? {}) as Record<string, unknown>;
-      const lesson = normalizeLesson(body, id);
-      await sql`
-        UPDATE lessons SET
-          subject = ${lesson.subject}, grade = ${lesson.grade}, teacher_id = ${lesson.teacherId},
-          school_id = ${lesson.schoolId}, date = ${lesson.date}, start_time = ${lesson.startTime},
-          end_time = ${lesson.endTime}, room = ${lesson.room}, status = ${lesson.status},
-          topic = ${lesson.topic}, notes = ${lesson.notes}, corrected_duration = ${lesson.correctedDuration}
-        WHERE id = ${id}
-      `;
-      return res.status(200).json({ lesson: { ...lesson, id } });
-    }
-
     if (req.method === 'DELETE') {
+      if (!auth.isAdmin) {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+
       await sql`DELETE FROM lessons WHERE id = ${id}`;
-      return res.status(204).end();
+      return res.status(200).json({ success: true });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
