@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Lesson, Teacher, School } from '../types';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 interface TeacherHoursReportAdvancedProps {
   lessons: Lesson[];
@@ -65,6 +65,7 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
   // === Варианты фильтров ===
   const [variants, setVariants] = useState<FilterVariant[]>([]);
   const [currentVariantName, setCurrentVariantName] = useState<string>('');
+  const [isExporting, setIsExporting] = useState(false);
 
   // Загрузка вариантов из localStorage при монтировании
   useEffect(() => {
@@ -210,43 +211,51 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
     }
   };
 
-  const exportToExcel = () => {
-    // Формируем массив строк 
-    const wsData = [
-      ['Teacher', 'Date', 'Start Time', 'End Time', 'Duration (min)', 'Corrected Duration (min)', 'School', 'Grade'],
-      ...reportData.map(row => [
-        row.teacherName,
-        row.date,
-        row.startTime,
-        row.endTime,
-        row.durationMinutes,
-        row.correctedDuration ?? '',
-        row.schoolName,
-        row.grade,
-      ])
+  // ExcelJS работает async и через Buffer/Blob
+  const exportToExcel = async () => {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Teacher Hours');
+
+    // Заголовки с шириной колонок
+    ws.columns = [
+      { header: 'Teacher', key: 'teacherName', width: 25 },
+      { header: 'Date', key: 'date', width: 12 },
+      { header: 'Start Time', key: 'startTime', width: 12 },
+      { header: 'End Time', key: 'endTime', width: 12 },
+      { header: 'Duration (min)', key: 'durationMinutes', width: 18 },
+      { header: 'Corrected Duration (min)', key: 'correctedDuration', width: 24 },
+      { header: 'School', key: 'schoolName', width: 20 },
+      { header: 'Grade', key: 'grade', width: 10 },
     ];
 
-    // Создаём worksheet
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    // Жирный заголовок
+    ws.getRow(1).font = { bold: true };
 
-    // Задаём ширину колонок
-    ws['!cols'] = [
-      { wch: 25 }, // Teacher
-      { wch: 12 }, // Date
-      { wch: 12 }, // Start Time
-      { wch: 12 }, // End Time
-      { wch: 18 }, // Duration
-      { wch: 24 }, // Corrected Duration
-      { wch: 20 }, // School
-      { wch: 10 }, // Grade
-    ];
+    // Добавляем строки данных
+    reportData.forEach(row => {
+      ws.addRow({
+        teacherName: row.teacherName,
+        date: row.date,
+        startTime: row.startTime,
+        endTime: row.endTime,
+        durationMinutes: row.durationMinutes,
+        correctedDuration: row.correctedDuration ?? '',
+        schoolName: row.schoolName,
+        grade: row.grade,
+      });
+    });
 
-    // Создаём workbook и добавляем лист
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Teacher Hours');
-
-    // Скачиваем файл
-    XLSX.writeFile(wb, `teacher_hours_${new Date().toISOString().split('T')[0]}.xlsx`);
+    // Скачиваем файл через Blob (браузерный способ)
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `teacher_hours_${new Date().toISOString().split('T')[0]}.xlsx`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   // Экспорт в CSV
@@ -347,11 +356,12 @@ const TeacherHoursReportAdvanced: React.FC<TeacherHoursReportAdvancedProps> = ({
         </div>
         <div className="flex gap-2 no-print">
           <button
-            onClick={exportToExcel}
-            className="bg-green-700 text-white px-4 py-2 rounded-xl font-bold shadow-lg shadow-green-200 hover:bg-green-800 transition-all text-sm"
+            onClick={async () => { setIsExporting(true); await exportToExcel(); setIsExporting(false); }}
+            disabled={isExporting}
+            className="bg-green-700 text-white px-4 py-2 rounded-xl font-bold shadow-lg shadow-green-200 hover:bg-green-800 transition-all text-sm disabled:opacity-60"
           >
-            <i className="fa-solid fa-file-excel mr-2"></i>
-            Excel
+            <i className={`fa-solid ${isExporting ? 'fa-spinner fa-spin' : 'fa-file-excel'} mr-2`}></i>
+            {isExporting ? 'Exporting...' : 'Excel'}
           </button>
           <button
             onClick={exportToCSV}
