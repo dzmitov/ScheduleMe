@@ -1,5 +1,9 @@
 {
-    "rewrites": [
-      { "source": "/((?!api/).*)", "destination": "/index.html" }
-    ]
-  }
+  "rewrites": [
+    { "source": "/api/lessons/:id", "destination": "/api/lessons" },
+    { "source": "/api/teachers/:id", "destination": "/api/teachers" },
+    { "source": "/api/schools/:id", "destination": "/api/schools" },
+    { "source": "/api/users/:id", "destination": "/api/users" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}
