@@ -150,9 +150,25 @@ export async function requireAdmin(
  * Настройка CORS. В .env задай: ALLOWED_ORIGIN=https://your-app.vercel.app
  * ABAP-аналогия: фильтрация по IP в SM59
  */
+// export function setCors(res: VercelResponse, methods = 'GET, POST, PATCH, DELETE, OPTIONS') {
+//   const allowedOrigin = process.env.ALLOWED_ORIGIN ?? '*';
+//   res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+//   res.setHeader('Access-Control-Allow-Methods', methods);
+//   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+// }
+
 export function setCors(res: VercelResponse, methods = 'GET, POST, PATCH, DELETE, OPTIONS') {
-  const allowedOrigin = process.env.ALLOWED_ORIGIN ?? '*';
-  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+  const allowedOrigin = process.env.ALLOWED_ORIGIN;
+  if (!allowedOrigin) {
+    // В development разрешаем localhost, в production — обязательно задать переменную
+    const isDev = process.env.VERCEL_ENV === 'development' || !process.env.VERCEL_ENV;
+    res.setHeader('Access-Control-Allow-Origin', isDev ? 'http://localhost:5173' : '');
+    if (!isDev) {
+      throw new Error('ALLOWED_ORIGIN environment variable is required in production');
+    }
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+  }
   res.setHeader('Access-Control-Allow-Methods', methods);
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
