@@ -192,7 +192,20 @@ const App: React.FC = () => {
                 <div key={time} className="flex gap-1.5">
                   <div className="w-7 text-right shrink-0 pt-1"><span className="text-[8px] font-black text-slate-400 font-mono">{time}</span></div>
                   <div className="flex-1 space-y-1">
-                    {timeLessons.map(l => <LessonCard key={l.id} lesson={l} teachers={teachers} schools={schools} isAdmin={isAdmin} compact={true} onEdit={openEditModal} />)}
+                    {timeLessons.map(l => (
+                      <LessonCard
+                        key={l.id}
+                        lesson={l}
+                        teachers={teachers}
+                        schools={schools}
+                        isAdmin={isAdmin}
+                        compact={true}
+                        onEdit={openEditModal}
+                        isEditMode={isEditMode}
+                        isSelected={selectedLessonIds.has(l.id)}
+                        onToggleSelect={toggleLessonSelect}
+                      />
+                    ))}
                     {isAdmin && (
                       <button onClick={() => openEditModal(undefined, { date: dateStr, startTime: time })} className="w-full h-6 border border-dashed border-slate-100 rounded-md flex items-center justify-center text-slate-300 text-[7px] font-black hover:border-indigo-100 hover:text-indigo-400 transition-all">
                         <i className="fa-solid fa-plus mr-0.5"></i> {timeLessons.length > 0 ? 'ADD MORE' : `ADD AT ${time}`}
@@ -248,7 +261,23 @@ const App: React.FC = () => {
                           {cellLessons.map(l => {
                             const t = teachers.find(teacher => teacher.id === l.teacherId);
                             return (
-                              <div key={l.id} onClick={(e) => { e.stopPropagation(); openEditModal(l); }} className="p-1.5 rounded-lg border-l-3 shadow-sm transition-all hover:scale-[1.02] active:scale-95 group/card" style={{ backgroundColor: `${t?.color || '#6366f1'}15`, borderLeftColor: t?.color || '#cbd5e1' }}>
+                              <div
+                                key={l.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  isEditMode ? toggleLessonSelect(l.id) : openEditModal(l);
+                                }}
+                                className={`p-1.5 rounded-lg border-l-3 shadow-sm transition-all active:scale-95 group/card relative ${isEditMode ? 'cursor-pointer hover:scale-[1.01]' : 'hover:scale-[1.02]'
+                                  } ${isEditMode && selectedLessonIds.has(l.id) ? 'ring-2 ring-inset ring-indigo-500 bg-indigo-50/60' : ''
+                                  }`}
+                                style={{ backgroundColor: `${t?.color || '#6366f1'}15`, borderLeftColor: t?.color || '#cbd5e1' }}
+                              >
+                                {isEditMode && (
+                                  <div className={`absolute top-0.5 right-0.5 w-3 h-3 rounded border flex items-center justify-center z-10 ${selectedLessonIds.has(l.id) ? 'bg-indigo-600 border-indigo-600' : 'border-slate-400 bg-white'
+                                    }`}>
+                                    {selectedLessonIds.has(l.id) && <i className="fa-solid fa-check text-white text-[5px]"></i>}
+                                  </div>
+                                )}
                                 <div className="flex justify-between items-start"><p className="text-[9px] font-black leading-tight text-slate-800 truncate" title={t ? `${t.firstName} ${t.lastName}` : 'TBA'}>{t ? t.lastName : 'TBA'}</p>{l.grade && <p className="text-[9px] font-black text-slate-500 shrink-0 ml-1">{l.grade}</p>}</div>
                                 <div className="flex flex-wrap items-center justify-between gap-x-1"><p className="text-[8px] font-black text-slate-400 whitespace-nowrap">{l.startTime} – {l.endTime}</p><p className="text-[7px] font-bold text-slate-400">{l.room}</p></div>
                               </div>
@@ -367,7 +396,23 @@ const App: React.FC = () => {
                             {cellLessons.map(l => {
                               const t = teachers.find(teacher => teacher.id === l.teacherId);
                               return (
-                                <div key={l.id} onClick={(e) => { e.stopPropagation(); openEditModal(l); }} className="p-1.5 rounded-lg border-l-3 shadow-sm transition-all hover:scale-[1.02] active:scale-95 group/card" style={{ backgroundColor: `${t?.color || '#6366f1'}15`, borderLeftColor: t?.color || '#cbd5e1' }}>
+                                <div
+                                  key={l.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    isEditMode ? toggleLessonSelect(l.id) : openEditModal(l);
+                                  }}
+                                  className={`p-1.5 rounded-lg border-l-3 shadow-sm transition-all active:scale-95 group/card relative ${isEditMode ? 'cursor-pointer hover:scale-[1.01]' : 'hover:scale-[1.02]'
+                                    } ${isEditMode && selectedLessonIds.has(l.id) ? 'ring-2 ring-inset ring-indigo-500 bg-indigo-50/60' : ''
+                                    }`}
+                                  style={{ backgroundColor: `${t?.color || '#6366f1'}15`, borderLeftColor: t?.color || '#cbd5e1' }}
+                                >
+                                  {isEditMode && (
+                                    <div className={`absolute top-0.5 right-0.5 w-3 h-3 rounded border flex items-center justify-center z-10 ${selectedLessonIds.has(l.id) ? 'bg-indigo-600 border-indigo-600' : 'border-slate-400 bg-white'
+                                      }`}>
+                                      {selectedLessonIds.has(l.id) && <i className="fa-solid fa-check text-white text-[5px]"></i>}
+                                    </div>
+                                  )}
                                   <div className="flex justify-between items-start"><p className="text-[9px] font-black leading-tight text-slate-800 truncate" title={t ? `${t.firstName} ${t.lastName}` : 'TBA'}>{t ? t.lastName : 'TBA'}</p>{l.grade && <p className="text-[9px] font-black text-slate-500 shrink-0 ml-1">{l.grade}</p>}</div>
                                   <div className="flex flex-wrap items-center justify-between gap-x-1"><p className="text-[8px] font-black text-slate-400 whitespace-nowrap">{l.startTime} – {l.endTime}</p><p className="text-[7px] font-bold text-slate-400">{l.room}</p></div>
                                 </div>
