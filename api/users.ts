@@ -8,6 +8,8 @@ function rowToApi(row: Record<string, unknown>) {
     email: row.email,
     role: row.role,
     teacherId: row.teacher_id ?? undefined,
+    teacher_first_name: row.teacher_first_name ?? undefined,
+    teacher_last_name: row.teacher_last_name ?? undefined,
   };
 }
 
@@ -120,7 +122,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await sql.query(updateQuery, updateValues);
 
         const { rows } = await sql`
-          SELECT id, email, role, teacher_id FROM app_users WHERE id = ${id}
+            SELECT u.id, u.email, u.role, u.teacher_id,
+                   t.first_name AS teacher_first_name, t.last_name AS teacher_last_name
+              FROM app_users u
+              LEFT JOIN teachers t ON t.id = u.teacher_id
+              WHERE u.id = ${id}
         `;
         return res.status(200).json({ user: rows[0] });
       }
@@ -158,9 +164,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'GET') {
       await ensureTable();
       const { rows } = await sql`
-        SELECT u.id, u.email, u.role, u.teacher_id
-        FROM app_users u
-        ORDER BY u.email
+      SELECT u.id, u.email, u.role, u.teacher_id,
+             t.first_name AS teacher_first_name, t.last_name AS teacher_last_name
+      FROM app_users u
+      LEFT JOIN teachers t ON t.id = u.teacher_id
+      ORDER BY u.email
       `;
       return res.status(200).json(rows.map(rowToApi));
     }
@@ -191,8 +199,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         VALUES (${newId}, ${email}, ${role}, ${teacherId})
       `;
 
-      const { rows } = await sql`SELECT id, email, role, teacher_id FROM app_users WHERE id = ${newId}`;
-      return res.status(201).json({ user: rowToApi(rows[0]) });
+      const { rows } = await sql`
+        SELECT u.id, u.email, u.role, u.teacher_id,
+               t.first_name AS teacher_first_name, t.last_name AS teacher_last_name
+          FROM app_users u
+          LEFT JOIN teachers t ON t.id = u.teacher_id
+          WHERE u.id = ${newId}
+        `;
+      return res.status(201).json({ user: rowToApi(rows[0] ?? {}) });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
