@@ -221,7 +221,9 @@ function rowToAppUser(row: Record<string, unknown>): AppUser {
     id: String(row.id ?? ''),
     email: String(row.email ?? ''),
     role: String(row.role ?? 'viewer') as AppUser['role'],
-    teacherId: row.teacher_id ? String(row.teacher_id) : undefined,
+    teacherId: (row.teacher_id ?? row.teacherId)
+      ? String(row.teacher_id ?? row.teacherId)
+      : undefined,
     teacherName: row.teacher_first_name && row.teacher_last_name
       ? `${row.teacher_first_name} ${row.teacher_last_name}`
       : undefined,
