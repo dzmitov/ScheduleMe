@@ -18,6 +18,7 @@ import UserModal from './components/modals/UserModal';
 import DashboardPage from './pages/DashboardPage';
 import SettingsPage from './pages/SettingsPage';
 import { useTokenSync } from './src/hooks/useTokenSync';
+import BulkEditModal from './components/modals/BulkEditModal';
 
 const App: React.FC = () => {
   useTokenSync();
@@ -43,6 +44,9 @@ const App: React.FC = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const [editingUser, setEditingUser] = useState<Partial<AppUser> | null>(null);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedLessonIds, setSelectedLessonIds] = useState<Set<string>>(new Set());
+  const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
@@ -74,6 +78,18 @@ const App: React.FC = () => {
     return h < 8 ? 8 : h;  // если раньше 8:00 — "прижимаем" к слоту 08:00
   };
 
+  const toggleLessonSelect = (id: string) => {
+    setSelectedLessonIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const cancelEditMode = () => {
+    setIsEditMode(false);
+    setSelectedLessonIds(new Set());
+  };
   const openEditModal = (lesson?: Lesson, initialData?: Partial<Lesson>) => {
     if (!isAdmin) return;
     const startTime = initialData?.startTime || '09:00';
@@ -440,6 +456,37 @@ const App: React.FC = () => {
                       <span>CLONE WEEK</span>
                     </button>
                   )}
+                  {!focusedDay && isAdmin && !isMobile && (
+                    !isEditMode ? (
+                      <button
+                        onClick={() => setIsEditMode(true)}
+                        className="bg-white border-2 border-slate-200 px-3 py-2 rounded-xl text-[9px] font-black hover:border-amber-400 hover:text-amber-600 transition-all flex items-center gap-1.5"
+                      >
+                        <i className="fa-solid fa-pen-to-square text-xs"></i>
+                        <span>EDIT LESSONS</span>
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={cancelEditMode}
+                          className="bg-white border-2 border-slate-200 px-3 py-2 rounded-xl text-[9px] font-black hover:border-slate-400 hover:text-slate-700 transition-all flex items-center gap-1.5"
+                        >
+                          <i className="fa-solid fa-xmark text-xs"></i>
+                          <span>CANCEL</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (selectedLessonIds.size === 0) { alert('Please select at least one lesson.'); return; }
+                            setIsBulkEditModalOpen(true);
+                          }}
+                          className="bg-amber-500 text-white px-3 py-2 rounded-xl text-[9px] font-black hover:bg-amber-600 transition-all flex items-center gap-1.5 shadow-lg shadow-amber-100"
+                        >
+                          <i className="fa-solid fa-sliders text-xs"></i>
+                          <span>CHANGE{selectedLessonIds.size > 0 ? ` (${selectedLessonIds.size})` : '...'}</span>
+                        </button>
+                      </>
+                    )
+                  )}
                   {/* Навигационные стрелки и Current Week */}
                   <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl shadow-sm border border-slate-100">
                     <button
@@ -469,24 +516,56 @@ const App: React.FC = () => {
               {focusedDay && (
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => { setFocusedDay(null); setSelectedSchoolId('all'); setSelectedTeacherId('all'); }}
+                    onClick={() => { setFocusedDay(null); cancelEditMode(); setSelectedSchoolId('all'); setSelectedTeacherId('all'); }}
                     className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[10px] font-black hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-100"
                   >
                     <i className="fa-solid fa-arrow-left"></i> BACK TO WEEK
                   </button>
                   {isAdmin && (
-                    <button
-                      onClick={() => {
-                        const next = new Date(focusedDay);
-                        next.setDate(next.getDate() + 7);
-                        setCopyDayTargetDate(toLocalDateStr(next));
-                        setIsCopyDayModalOpen(true);
-                      }}
-                      className="bg-white border-2 border-slate-200 px-3 py-2 rounded-xl text-[9px] font-black hover:border-indigo-500 hover:text-indigo-600 transition-all flex items-center gap-1.5"
-                    >
-                      <i className="fa-solid fa-copy text-xs"></i>
-                      <span>CLONE DAY</span>
-                    </button>
+                    <>
+                      <button
+                        onClick={() => {
+                          const next = new Date(focusedDay);
+                          next.setDate(next.getDate() + 7);
+                          setCopyDayTargetDate(toLocalDateStr(next));
+                          setIsCopyDayModalOpen(true);
+                        }}
+                        className="bg-white border-2 border-slate-200 px-3 py-2 rounded-xl text-[9px] font-black hover:border-indigo-500 hover:text-indigo-600 transition-all flex items-center gap-1.5"
+                      >
+                        <i className="fa-solid fa-copy text-xs"></i>
+                        <span>CLONE DAY</span>
+                      </button>
+                      {/* Edit Lessons — day view */}
+                      {!isEditMode ? (
+                        <button
+                          onClick={() => setIsEditMode(true)}
+                          className="bg-white border-2 border-slate-200 px-3 py-2 rounded-xl text-[9px] font-black hover:border-amber-400 hover:text-amber-600 transition-all flex items-center gap-1.5"
+                        >
+                          <i className="fa-solid fa-pen-to-square text-xs"></i>
+                          <span>EDIT LESSONS</span>
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={cancelEditMode}
+                            className="bg-white border-2 border-slate-200 px-3 py-2 rounded-xl text-[9px] font-black hover:border-slate-400 hover:text-slate-700 transition-all flex items-center gap-1.5"
+                          >
+                            <i className="fa-solid fa-xmark text-xs"></i>
+                            <span>CANCEL</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (selectedLessonIds.size === 0) { alert('Please select at least one lesson.'); return; }
+                              setIsBulkEditModalOpen(true);
+                            }}
+                            className="bg-amber-500 text-white px-3 py-2 rounded-xl text-[9px] font-black hover:bg-amber-600 transition-all flex items-center gap-1.5 shadow-lg shadow-amber-100"
+                          >
+                            <i className="fa-solid fa-sliders text-xs"></i>
+                            <span>CHANGE{selectedLessonIds.size > 0 ? ` (${selectedLessonIds.size})` : '...'}</span>
+                          </button>
+                        </>
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -576,6 +655,22 @@ const App: React.FC = () => {
             } catch (err) {
               alert(err instanceof Error ? err.message : 'Failed to clone day');
             }
+          }}
+        />
+      )}
+      {/* Bulk Edit Modal */}
+      {isBulkEditModalOpen && (
+        <BulkEditModal
+          selectedCount={selectedLessonIds.size}
+          teachers={teachers}
+          onClose={() => setIsBulkEditModalOpen(false)}
+          onChangeTeacher={async (teacherId) => {
+            await lessonActions.bulkUpdateTeacher([...selectedLessonIds], teacherId);
+            cancelEditMode();
+          }}
+          onDelete={async () => {
+            await lessonActions.bulkDelete([...selectedLessonIds]);
+            cancelEditMode();
           }}
         />
       )}

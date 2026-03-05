@@ -8,22 +8,65 @@ interface LessonCardProps {
   isAdmin?: boolean;
   onEdit?: (lesson: Lesson) => void;
   compact?: boolean;
+  // ── Режим массового редактирования ──────────────────────────────────────────
+  // ABAP-аналогия: ALV с SET_TABLE_FOR_FIRST_DISPLAY и is_layout-sel_mode = 'A'
+  // isEditMode = true  → режим выбора включён (чекбоксы видны)
+  // isSelected        → эта строка выбрана (аналог FIELDCAT-SELTEXT / MARK)
+  // onToggleSelect    → клик по чекбоксу (аналог AT LINE-SELECTION)
+  isEditMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
-const LessonCard: React.FC<LessonCardProps> = ({ lesson, teachers, schools, isAdmin, onEdit, compact }) => {
+const LessonCard: React.FC<LessonCardProps> = ({
+  lesson,
+  teachers,
+  schools,
+  isAdmin,
+  onEdit,
+  compact,
+  isEditMode,
+  isSelected,
+  onToggleSelect,
+}) => {
   const teacher = teachers.find(t => t.id === lesson.teacherId);
   const school = schools.find(s => s.id === lesson.schoolId);
 
   const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Unassigned';
   const teacherColor = teacher?.color || '#cbd5e1';
 
+  // Обработчик клика по карточке:
+  // В режиме editMode — переключаем выбор (toggle), иначе открываем редактирование
+  // ABAP-аналогия: USER-COMMAND 'PICK' vs USER-COMMAND 'MARK'
+  const handleCardClick = () => {
+    if (isEditMode) {
+      onToggleSelect?.(lesson.id);
+    } else if (isAdmin) {
+      onEdit?.(lesson);
+    }
+  };
+
   if (compact) {
     return (
       <div
-        onClick={() => isAdmin && onEdit?.(lesson)}
-        className="bg-white rounded-lg border border-slate-100 shadow-sm transition-all p-1.5 flex items-center gap-2 relative cursor-pointer active:scale-95"
-        style={{ borderLeft: `3px solid ${teacherColor}` }}
+        onClick={handleCardClick}
+        className={`bg-white rounded-lg border shadow-sm transition-all p-1.5 flex items-center gap-2 relative cursor-pointer active:scale-95 ${
+          isEditMode && isSelected
+            ? 'border-indigo-400 bg-indigo-50/60 shadow-indigo-100'
+            : 'border-slate-100'
+        }`}
+        style={{ borderLeft: `3px solid ${isEditMode && isSelected ? '#6366f1' : teacherColor}` }}
       >
+        {/* Чекбокс в режиме editMode */}
+        {isEditMode && (
+          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${
+            isSelected
+              ? 'bg-indigo-600 border-indigo-600'
+              : 'border-slate-300 bg-white'
+          }`}>
+            {isSelected && <i className="fa-solid fa-check text-white text-[7px]"></i>}
+          </div>
+        )}
         <div className="w-14 shrink-0">
           <p className="text-[8px] font-black text-slate-700 font-mono leading-none">
             {lesson.startTime}
@@ -45,18 +88,40 @@ const LessonCard: React.FC<LessonCardProps> = ({ lesson, teachers, schools, isAd
             {lesson.grade} • {lesson.room}
           </p>
         </div>
-        <div className="shrink-0 text-slate-300">
-          <i className="fa-solid fa-chevron-right text-[7px]"></i>
-        </div>
+        {!isEditMode && (
+          <div className="shrink-0 text-slate-300">
+            <i className="fa-solid fa-chevron-right text-[7px]"></i>
+          </div>
+        )}
       </div>
     );
   }
 
   return (
     <div
-      className="bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all p-3 flex flex-col gap-2 relative group"
-      style={{ borderLeft: `4px solid ${teacherColor}` }}
+      onClick={isEditMode ? handleCardClick : undefined}
+      className={`bg-white rounded-xl border shadow-sm hover:shadow-md transition-all p-3 flex flex-col gap-2 relative group ${
+        isEditMode ? 'cursor-pointer' : ''
+      } ${
+        isEditMode && isSelected
+          ? 'border-indigo-400 bg-indigo-50/40 shadow-indigo-100'
+          : 'border-slate-100'
+      }`}
+      style={{ borderLeft: `4px solid ${isEditMode && isSelected ? '#6366f1' : teacherColor}` }}
     >
+      {/* Чекбокс в режиме editMode (полная карточка) */}
+      {isEditMode && (
+        <div className="absolute top-3 right-3 z-10">
+          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+            isSelected
+              ? 'bg-indigo-600 border-indigo-600'
+              : 'border-slate-300 bg-white'
+          }`}>
+            {isSelected && <i className="fa-solid fa-check text-white text-[9px]"></i>}
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-start">
         <div className="pr-6">
           <p className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">
@@ -90,9 +155,10 @@ const LessonCard: React.FC<LessonCardProps> = ({ lesson, teachers, schools, isAd
         </div>
       )}
 
-      {isAdmin && (
+      {/* Кнопка редактирования — скрыта в режиме editMode */}
+      {isAdmin && !isEditMode && (
         <button
-          onClick={() => onEdit?.(lesson)}
+          onClick={e => { e.stopPropagation(); onEdit?.(lesson); }}
           className="absolute top-4 right-4 bg-slate-100 hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
           title="Edit"
         >

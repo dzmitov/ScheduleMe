@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Dispatch, SetStateAction } from 'react';
 import { Lesson, Teacher, School, AppUser, LessonStatus } from '../../types';
 import {
   fetchLessons, addLesson, updateLesson, deleteLesson,
@@ -42,6 +42,8 @@ export interface LessonActions {
     targetDate: string;
     keepTeachers: boolean;
   }) => Promise<void>;
+  bulkDelete: (ids: string[]) => Promise<void>;
+  bulkUpdateTeacher: (ids: string[], teacherId: string | null) => Promise<void>;
 }
 
 export interface TeacherActions {
@@ -75,10 +77,10 @@ export interface UseAppDataReturn {
   users: AppUser[];
 
   // Сеттеры — нужны для оптимистичных обновлений прямо в компонентах
-  setLessons: React.Dispatch<React.SetStateAction<Lesson[]>>;
-  setTeachers: React.Dispatch<React.SetStateAction<Teacher[]>>;
-  setSchools: React.Dispatch<React.SetStateAction<School[]>>;
-  setUsers: React.Dispatch<React.SetStateAction<AppUser[]>>;
+  setLessons: Dispatch<SetStateAction<Lesson[]>>;
+  setTeachers: Dispatch<SetStateAction<Teacher[]>>;
+  setSchools: Dispatch<SetStateAction<School[]>>;
+  setUsers: Dispatch<SetStateAction<AppUser[]>>;
 
   // Состояние загрузки (ABAP: флаг IS_LOADING)
   isLoading: boolean;
@@ -95,9 +97,9 @@ export interface UseAppDataReturn {
 const newId = () => Math.random().toString(36).substring(2, 11);
 
 const toLocalDateStr = (d: Date): string => {
-  const year  = d.getFullYear();
+  const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day   = String(d.getDate()).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
 
@@ -114,10 +116,10 @@ const toLocalDateStr = (d: Date): string => {
  *   const { lessons, teachers, schools, isLoading, lessonActions } = useAppData();
  */
 export function useAppData(): UseAppDataReturn {
-  const [lessons,  setLessons]  = useState<Lesson[]>([]);
+  const [lessons, setLessons] = useState<Lesson[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [schools,  setSchools]  = useState<School[]>([]);
-  const [users,    setUsers]    = useState<AppUser[]>([]);
+  const [schools, setSchools] = useState<School[]>([]);
+  const [users, setUsers] = useState<AppUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errors, setErrors] = useState<DataErrors>({
     lessons: null, teachers: null, schools: null, users: null,
@@ -133,10 +135,10 @@ export function useAppData(): UseAppDataReturn {
       }));
 
     Promise.all([
-      fetchLessons() .then(setLessons) .catch(setErr('lessons')),
+      fetchLessons().then(setLessons).catch(setErr('lessons')),
       fetchTeachers().then(setTeachers).catch(setErr('teachers')),
-      fetchSchools() .then(setSchools) .catch(setErr('schools')),
-      fetchUsers()   .then(setUsers)   .catch(setErr('users')),
+      fetchSchools().then(setSchools).catch(setErr('schools')),
+      fetchUsers().then(setUsers).catch(setErr('users')),
     ]).finally(() => setIsLoading(false));
   }, []);
 
@@ -242,6 +244,21 @@ export function useAppData(): UseAppDataReturn {
       await Promise.all(newLessons.map(addLesson));
       setLessons(prev => [...prev, ...newLessons]);
       alert(`Successfully cloned ${newLessons.length} session(s) to ${targetDate}.`);
+    },
+    bulkDelete: async (ids) => {
+      await Promise.all(ids.map(id => deleteLesson(id)));
+      setLessons(prev => prev.filter(l => !ids.includes(l.id)));
+    },
+
+    bulkUpdateTeacher: async (ids, teacherId) => {
+      const newTid = teacherId ?? '';
+      const toUpdate = lessons.filter(l => ids.includes(l.id));
+      await Promise.all(
+        toUpdate.map(l => updateLesson({ ...l, teacherId: newTid }))
+      );
+      setLessons(prev =>
+        prev.map(l => ids.includes(l.id) ? { ...l, teacherId: newTid } : l)
+      );
     },
   };
 
