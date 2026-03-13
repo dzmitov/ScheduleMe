@@ -31,12 +31,8 @@ const LessonModal: React.FC<LessonModalProps> = ({
   const isEdit = !!lesson.id && lessons.some(l => l.id === lesson.id);
 
   return (
-    {/* На мобилке — модалка прилипает к низу экрана (как bottom sheet)
-        ABAP-аналогия: DYNPRO с SCROLL_TO_TOP=OFF, видна нижняя часть экрана */}
     <div className="fixed inset-0 z-[210] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn">
-      {/* Контейнер: на мобилке — полная ширина, скруглён только сверху
-          Было:  p-6 lg:p-10  rounded-[3rem] lg:rounded-[3.5rem]
-          Стало: p-3 sm:p-4 lg:p-6   rounded-t-2xl sm:rounded-2xl lg:rounded-3xl */}
+      {/* Контейнер: на мобилке полная ширина, скруглён только сверху */}
       <div className="bg-white w-full sm:max-w-2xl rounded-t-2xl sm:rounded-2xl lg:rounded-3xl shadow-2xl p-3 sm:p-4 lg:p-6 relative max-h-[92vh] overflow-y-auto custom-scrollbar">
 
         {/* Header */}
