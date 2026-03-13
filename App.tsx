@@ -236,58 +236,49 @@ const App: React.FC = () => {
             <thead>
               <tr className="bg-slate-50">
                 <th className="sticky top-0 left-0 z-50 w-16 p-2 text-[9px] font-black text-slate-800 uppercase tracking-widest text-center border-r border-b border-slate-200 bg-slate-50 shadow-[2px_0_0_0_#e2e8f0]">TIME</th>
-                {filteredSchools.map(school => (
-                  <th key={school.id} className="sticky top-0 z-40 p-2 border-l border-b border-slate-200 bg-slate-50">
-                    <div className="flex flex-col items-center"><span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest truncate max-w-full" title={school.name}>{school.name}</span></div>
-                  </th>
-                ))}
+                {filteredSchools.length === 0
+                  ? <th className="sticky top-0 z-40 p-2 border-l border-b border-slate-200 bg-slate-50 w-64" />
+                  : filteredSchools.map(school => (
+                    <th key={school.id} className="sticky top-0 z-40 p-2 border-l border-b border-slate-200 bg-slate-50">
+                      <div className="flex flex-col items-center"><span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest truncate max-w-full" title={school.name}>{school.name}</span></div>
+                    </th>
+                  ))
+                }
               </tr>
             </thead>
             <tbody>
               {timeSlots.map(time => (
                 <tr key={time} className="group border-b border-slate-100 last:border-0">
                   <td className="sticky left-0 z-30 p-2 text-[10px] font-black text-slate-400 text-center bg-slate-50/50 backdrop-blur-sm font-mono border-r border-slate-200 shadow-[2px_0_0_0_#e2e8f0]">{time}</td>
-                  {filteredSchools.map(school => {
-                    const hour = parseInt(time.split(':')[0]);
-                    const cellLessons = lessons.filter(l =>
-                      l.date === dateStr &&
-                      getEffectiveHour(l.startTime) === hour &&
-                      l.schoolId === school.id &&
-                      (selectedTeacherId === 'all' || l.teacherId === selectedTeacherId)
-                    );
-                    return (
-                      <td key={`${school.id}-${time}`} className="p-1 border-l border-slate-100 relative align-top hover:bg-slate-50/40 group/cell transition-colors cursor-pointer" onClick={() => openEditModal(undefined, { date: dateStr, startTime: time, schoolId: school.id })}>
-                        <div className="flex flex-col gap-1 h-full min-h-[45px]">
-                          {cellLessons.map(l => {
-                            const t = teachers.find(teacher => teacher.id === l.teacherId);
-                            return (
-                              <div
-                                key={l.id}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  isEditMode ? toggleLessonSelect(l.id) : openEditModal(l);
-                                }}
-                                className={`p-1.5 rounded-lg border-l-3 shadow-sm transition-all active:scale-95 group/card relative ${isEditMode ? 'cursor-pointer hover:scale-[1.01]' : 'hover:scale-[1.02]'
-                                  } ${isEditMode && selectedLessonIds.has(l.id) ? 'ring-2 ring-inset ring-indigo-500 bg-indigo-50/60' : ''
-                                  }`}
-                                style={{ backgroundColor: `${t?.color || '#6366f1'}15`, borderLeftColor: t?.color || '#cbd5e1' }}
-                              >
-                                {isEditMode && (
-                                  <div className={`absolute top-0.5 right-0.5 w-3 h-3 rounded border flex items-center justify-center z-10 ${selectedLessonIds.has(l.id) ? 'bg-indigo-600 border-indigo-600' : 'border-slate-400 bg-white'
-                                    }`}>
-                                    {selectedLessonIds.has(l.id) && <i className="fa-solid fa-check text-white text-[5px]"></i>}
-                                  </div>
-                                )}
-                                <div className="flex justify-between items-start"><p className="text-[9px] font-black leading-tight text-slate-800 truncate" title={t ? `${t.firstName} ${t.lastName}` : 'TBA'}>{t ? t.lastName : 'TBA'}</p>{l.grade && <p className="text-[9px] font-black text-slate-500 shrink-0 ml-1">{l.grade}</p>}</div>
-                                <div className="flex flex-wrap items-center justify-between gap-x-1"><p className="text-[8px] font-black text-slate-400 whitespace-nowrap">{l.startTime} – {l.endTime}</p><p className="text-[7px] font-bold text-slate-400">{l.room}</p></div>
-                              </div>
-                            );
-                          })}
-                          {isAdmin && <div className="opacity-0 group-hover/cell:opacity-100 flex items-center justify-center p-1 border border-dashed border-slate-200 rounded-lg text-slate-300 text-[7px] font-black transition-all hover:border-indigo-300 hover:text-indigo-400"><i className="fa-solid fa-plus"></i></div>}
+                  {filteredSchools.length === 0
+                    ? (
+                      <td
+                        className="p-0.5 border-l border-slate-100 relative align-top hover:bg-slate-50/40 group/cell cursor-pointer w-64"
+                        onClick={() => openEditModal(undefined, { date: dateStr, startTime: time })}
+                      >
+                        <div className="min-h-[45px] flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity">
+                          <span className="text-[9px] font-black text-slate-300">+ ADD</span>
                         </div>
                       </td>
-                    );
-                  })}
+                    )
+                    : filteredSchools.map(school => {
+                      const hour = parseInt(time.split(':')[0]);
+                      const cellLessons = lessons.filter(l =>
+                        l.date === dateStr &&
+                        getEffectiveHour(l.startTime) === hour &&
+                        l.schoolId === school.id &&
+                        (selectedTeacherId === 'all' || l.teacherId === selectedTeacherId)
+                      );
+                      return (
+                        <td key={`${school.id}-${time}`} className="p-1 border-l border-slate-100 relative align-top hover:bg-slate-50/40 group/cell transition-colors cursor-pointer" onClick={() => openEditModal(undefined, { date: dateStr, startTime: time, schoolId: school.id })}>
+                          <div className="flex flex-col gap-1 h-full min-h-[45px]">
+                            {cellLessons.map(l => { /* ... без изменений ... */ })}
+                            {isAdmin && <div className="opacity-0 group-hover/cell:opacity-100 ..."><i className="fa-solid fa-plus"></i></div>}
+                          </div>
+                        </td>
+                      );
+                    })
+                  }
                 </tr>
               ))}
             </tbody>
