@@ -272,8 +272,44 @@ const App: React.FC = () => {
                       return (
                         <td key={`${school.id}-${time}`} className="p-1 border-l border-slate-100 relative align-top hover:bg-slate-50/40 group/cell transition-colors cursor-pointer" onClick={() => openEditModal(undefined, { date: dateStr, startTime: time, schoolId: school.id })}>
                           <div className="flex flex-col gap-1 h-full min-h-[45px]">
-                            {cellLessons.map(l => { /* ... без изменений ... */ })}
-                            {isAdmin && <div className="opacity-0 group-hover/cell:opacity-100 ..."><i className="fa-solid fa-plus"></i></div>}
+                            {cellLessons.map(l => {
+                              const t = teachers.find(teacher => teacher.id === l.teacherId);
+                              return (
+                                <div
+                                  key={l.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    isEditMode ? toggleLessonSelect(l.id) : openEditModal(l);
+                                  }}
+                                  className={`p-1.5 rounded-lg border-l-3 shadow-sm transition-all active:scale-95 group/card relative ${isEditMode ? 'cursor-pointer hover:scale-[1.01]' : 'hover:scale-[1.02]'
+                                    } ${isEditMode && selectedLessonIds.has(l.id) ? 'ring-2 ring-inset ring-indigo-500 bg-indigo-50/60' : ''
+                                    }`}
+                                  style={{ backgroundColor: `${t?.color || '#6366f1'}15`, borderLeftColor: t?.color || '#cbd5e1' }}
+                                >
+                                  {isEditMode && (
+                                    <div className={`absolute top-0.5 right-0.5 w-3 h-3 rounded border flex items-center justify-center z-10 ${selectedLessonIds.has(l.id) ? 'bg-indigo-600 border-indigo-600' : 'border-slate-400 bg-white'
+                                      }`}>
+                                      {selectedLessonIds.has(l.id) && <i className="fa-solid fa-check text-white text-[5px]"></i>}
+                                    </div>
+                                  )}
+                                  <div className="flex justify-between items-start">
+                                    <p className="text-[9px] font-black leading-tight text-slate-800 truncate" title={t ? `${t.firstName} ${t.lastName}` : 'TBA'}>
+                                      {t ? t.lastName : 'TBA'}
+                                    </p>
+                                    {l.grade && <p className="text-[9px] font-black text-slate-500 shrink-0 ml-1">{l.grade}</p>}
+                                  </div>
+                                  <div className="flex flex-wrap items-center justify-between gap-x-1">
+                                    <p className="text-[8px] font-black text-slate-400 whitespace-nowrap">{l.startTime} – {l.endTime}</p>
+                                    <p className="text-[7px] font-bold text-slate-400">{l.room}</p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            {isAdmin && (
+                              <div className="opacity-0 group-hover/cell:opacity-100 flex items-center justify-center p-1 border border-dashed border-slate-200 rounded-lg text-slate-300 text-[7px] font-black transition-all hover:border-indigo-300 hover:text-indigo-400">
+                                <i className="fa-solid fa-plus"></i>
+                              </div>
+                            )}
                           </div>
                         </td>
                       );
