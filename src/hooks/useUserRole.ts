@@ -66,7 +66,7 @@ export function useUserRole(): UseUserRoleReturn {
 
         // Если учитель — сразу фильтруем дашборд только его уроками
         // ABAP-аналогия: SET PARAMETER ID 'ZTEACHER_ID' FIELD lv_teacher_id
-        if (role.role === 'teacher' && role.teacherId) {
+        if (role.teacherId) {
           setDefaultTeacherFilter(role.teacherId);
         }
       })
