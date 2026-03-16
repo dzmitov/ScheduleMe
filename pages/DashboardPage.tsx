@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lesson, Teacher, School } from '../types';
 import LessonCard from '../components/LessonCard';
@@ -32,7 +32,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 }) => {
   const navigate = useNavigate();
   const [teacherFilter, setTeacherFilter] = useState<string>(defaultTeacherFilter);
-
+  useEffect(() => {
+    setTeacherFilter(defaultTeacherFilter);
+  }, [defaultTeacherFilter]);
   const stats = useMemo(() => ({ total: lessons.length }), [lessons]);
 
   // Группируем ближайшие уроки по дате (максимум 5 дней вперёд)
@@ -136,9 +138,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               return (
                 <div key={group.date}>
                   <div className="flex items-center gap-3 mb-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest ${
-                      isToday ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'
-                    }`}>
+                    <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest ${isToday ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'
+                      }`}>
                       {dayLabel}
                     </span>
                     <span className="text-xs font-bold text-slate-400">
