@@ -130,7 +130,7 @@ const LessonModal: React.FC<LessonModalProps> = ({
               type="number"
               min="1"
               max="480"
-              placeholder="60"
+              placeholder="e.g. 60"
               value={lesson.correctedDuration ?? ''}
               onChange={e => onChange({
                 ...lesson,
